@@ -15,6 +15,9 @@ resources:
     description: 'Backing OCI image'
     auto-fetch: true
     upstream-source: gcr.io/arrikto/kubeflow/oidc-authservice:fef11c3
+peers:
+  client-secret:
+    interface: client-secret
 provides:
   oidc-client:
     interface: oidc-client

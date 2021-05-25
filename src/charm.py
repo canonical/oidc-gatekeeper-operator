@@ -7,7 +7,6 @@ from string import ascii_uppercase, digits
 from ops.charm import CharmBase
 from ops.main import main
 from ops.model import ActiveStatus, MaintenanceStatus, WaitingStatus, BlockedStatus
-from ops.framework import StoredState
 
 from oci_image import OCIImageResource, OCIImageResourceError
 from serialized_data_interface import (
@@ -22,18 +21,14 @@ def gen_pass() -> str:
 
 
 class Operator(CharmBase):
-    _stored = StoredState()
-
     def __init__(self, *args):
         super().__init__(*args)
         if not self.unit.is_leader():
             # We can't do anything useful when not the leader, so do nothing.
-            self.model.unit.status = WaitingStatus("Waiting for leadership")
+            self.model.unit.status = ActiveStatus()
             return
         self.log = logging.getLogger(__name__)
         self.image = OCIImageResource(self, "oci-image")
-
-        self._stored.set_default(secret_key=gen_pass())
 
         try:
             self.interfaces = get_interfaces(self)
@@ -48,7 +43,6 @@ class Operator(CharmBase):
 
         for event in [
             self.on.install,
-            self.on.leader_elected,
             self.on.upgrade_charm,
             self.on.config_changed,
         ]:
@@ -59,6 +53,9 @@ class Operator(CharmBase):
             self.on["ingress-auth"].relation_changed, self.configure_mesh
         )
         self.framework.observe(self.on["oidc-client"].relation_changed, self.send_info)
+        self.framework.observe(
+            self.on["client-secret"].relation_changed, self.check_secret
+        )
 
     def configure_mesh(self, event):
         if self.interfaces["ingress"]:
@@ -89,7 +86,9 @@ class Operator(CharmBase):
         if not config.get("public-url"):
             return False
 
-        secret_key = self.model.config["client-secret"] or self._stored.secret_key
+        if (secret_key := self.check_secret()) is None:
+            # Leader hasn't set a secret key yet.
+            event.defer()
 
         if self.interfaces["oidc-client"]:
             self.interfaces["oidc-client"].send_data(
@@ -100,6 +99,12 @@ class Operator(CharmBase):
                     "secret": secret_key,
                 }
             )
+
+    def check_secret(self, event=None):
+        for rel in self.model.relations["client-secret"]:
+            if "client-secret" not in rel.data[self.model.app]:
+                rel.data[self.model.app]["client-secret"] = gen_pass()
+            return rel.data[self.model.app]["client-secret"]
 
     def main(self, event):
         try:
@@ -112,7 +117,7 @@ class Operator(CharmBase):
         public_url = self.model.config["public-url"]
         port = self.model.config["port"]
         oidc_scopes = self.model.config["oidc-scopes"]
-        secret_key = self.model.config["client-secret"] or self._stored.secret_key
+        secret_key = self.check_secret()
 
         self.model.unit.status = MaintenanceStatus("Setting pod spec")
 
