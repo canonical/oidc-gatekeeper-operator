@@ -30,7 +30,7 @@ jobs:
         CS_URL="cs:~dex-charmers/oidc-gatekeeper"
 
         IMAGE=$(yq eval '.resources.oci-image.upstream-source' metadata.yaml)
-        charmcraft build
+        tox -e build
         docker pull $IMAGE
         charm push ./*.charm $CS_URL --resource oci-image=$IMAGE
 

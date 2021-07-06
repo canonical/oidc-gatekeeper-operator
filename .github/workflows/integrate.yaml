@@ -60,11 +60,12 @@ jobs:
     - name: Install dependencies
       run: |
         set -eux
-        sudo pip3 install charmcraft
+        sudo snap install charmcraft
         sudo snap install juju --classic
         sudo snap install juju-helpers --classic
         sudo snap install juju-wait --classic
         sudo snap install yq
+        sudo apt-get install python3-pip tox
 
     - name: Bootstrap Juju
       run: |
@@ -82,7 +83,7 @@ jobs:
     - name: Deploy charm
       run: |
         set -eux
-        charmcraft build -v
+        tox -e build
         juju deploy ./*.charm \
           --resource oci-image=$(yq eval '.resources.oci-image.upstream-source' metadata.yaml)
         juju relate dex-auth:oidc-client oidc-gatekeeper:oidc-client
