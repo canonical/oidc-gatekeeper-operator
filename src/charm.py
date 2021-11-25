@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Copyright 2021 Canonical Ltd.
+# See LICENSE file for licensing details.
 
 import logging
 from random import choices
@@ -16,108 +18,42 @@ from serialized_data_interface import (
 )
 
 
-def gen_pass() -> str:
-    return "".join(choices(ascii_uppercase + digits, k=30))
-
-
 class Operator(CharmBase):
     def __init__(self, *args):
         super().__init__(*args)
-        if not self.unit.is_leader():
-            # We can't do anything useful when not the leader, so do nothing.
-            self.model.unit.status = ActiveStatus()
-            return
+
         self.log = logging.getLogger(__name__)
         self.image = OCIImageResource(self, "oci-image")
-
-        try:
-            self.interfaces = get_interfaces(self)
-        except NoVersionsListed as err:
-            self.model.unit.status = WaitingStatus(str(err))
-            return
-        except NoCompatibleVersions as err:
-            self.model.unit.status = BlockedStatus(str(err))
-            return
-        else:
-            self.model.unit.status = ActiveStatus()
 
         for event in [
             self.on.install,
             self.on.upgrade_charm,
             self.on.config_changed,
+            self.on["ingress"].relation_changed,
+            self.on["ingress-auth"].relation_changed,
+            self.on["oidc-client"].relation_changed,
+            self.on["client-secret"].relation_changed,
         ]:
             self.framework.observe(event, self.main)
 
-        self.framework.observe(self.on["ingress"].relation_changed, self.configure_mesh)
-        self.framework.observe(
-            self.on["ingress-auth"].relation_changed, self.configure_mesh
-        )
-        self.framework.observe(self.on["oidc-client"].relation_changed, self.send_info)
-        self.framework.observe(
-            self.on["client-secret"].relation_changed, self.check_secret
-        )
-
-    def configure_mesh(self, event):
-        if self.interfaces["ingress"]:
-            self.interfaces["ingress"].send_data(
-                {
-                    "prefix": "/authservice",
-                    "rewrite": "/",
-                    "service": self.model.app.name,
-                    "port": self.model.config["port"],
-                }
-            )
-        if self.interfaces["ingress-auth"]:
-            self.interfaces["ingress-auth"].send_data(
-                {
-                    "service": self.model.app.name,
-                    "port": self.model.config["port"],
-                    "allowed-request-headers": [
-                        "cookie",
-                        "X-Auth-Token",
-                    ],
-                    "allowed-response-headers": ["kubeflow-userid"],
-                }
-            )
-
-    def send_info(self, event):
-        config = self.model.config
-
-        if not config.get("public-url"):
-            return False
-
-        if (secret_key := self.check_secret()) is None:
-            # Leader hasn't set a secret key yet.
-            event.defer()
-
-        if self.interfaces["oidc-client"]:
-            self.interfaces["oidc-client"].send_data(
-                {
-                    "id": config["client-id"],
-                    "name": config["client-name"],
-                    "redirectURIs": ["/authservice/oidc/callback"],
-                    "secret": secret_key,
-                }
-            )
-
-    def check_secret(self, event=None):
-        for rel in self.model.relations["client-secret"]:
-            if "client-secret" not in rel.data[self.model.app]:
-                rel.data[self.model.app]["client-secret"] = gen_pass()
-            return rel.data[self.model.app]["client-secret"]
-
     def main(self, event):
         try:
-            image_details = self.image.fetch()
-        except OCIImageResourceError as e:
-            self.model.unit.status = e.status
-            self.log.info(e)
+            interfaces = self._get_interfaces()
+
+            secret_key = self._check_secret()
+
+            image_details = self._check_image_details()
+
+        except CheckFailed as error:
+            self.model.unit.status = error.status
             return
+
+        self._send_info(interfaces, secret_key)
+        self._configure_mesh(interfaces)
 
         public_url = self.model.config["public-url"]
         port = self.model.config["port"]
         oidc_scopes = self.model.config["oidc-scopes"]
-        secret_key = self.check_secret()
 
         self.model.unit.status = MaintenanceStatus("Setting pod spec")
 
@@ -148,6 +84,88 @@ class Operator(CharmBase):
         )
 
         self.model.unit.status = ActiveStatus()
+
+    def _get_interfaces(self):
+        try:
+            interfaces = get_interfaces(self)
+        except NoVersionsListed as err:
+            raise CheckFailed(str(err), WaitingStatus)
+        except NoCompatibleVersions as err:
+            raise CheckFailed(str(err), BlockedStatus)
+        return interfaces
+
+    def _check_image_details(self):
+        try:
+            image_details = self.image.fetch()
+        except OCIImageResourceError as e:
+            raise CheckFailed(f"{e.status_message}: oci-image", e.status_type)
+        return image_details
+
+    def _check_public_url(self):
+        if not self.model.config.get("public-url"):
+            raise CheckFailed("public-url config required", BlockedStatus)
+
+    def _configure_mesh(self, interfaces):
+        if interfaces["ingress"]:
+            interfaces["ingress"].send_data(
+                {
+                    "prefix": "/authservice",
+                    "rewrite": "/",
+                    "service": self.model.app.name,
+                    "port": self.model.config["port"],
+                }
+            )
+        if interfaces["ingress-auth"]:
+            interfaces["ingress-auth"].send_data(
+                {
+                    "service": self.model.app.name,
+                    "port": self.model.config["port"],
+                    "allowed-request-headers": [
+                        "cookie",
+                        "X-Auth-Token",
+                    ],
+                    "allowed-response-headers": ["kubeflow-userid"],
+                }
+            )
+
+    def _send_info(self, interfaces, secret_key):
+        config = self.model.config
+
+        if not config.get("public-url"):
+            return False
+
+        if interfaces["oidc-client"]:
+            interfaces["oidc-client"].send_data(
+                {
+                    "id": config["client-id"],
+                    "name": config["client-name"],
+                    "redirectURIs": ["/authservice/oidc/callback"],
+                    "secret": secret_key,
+                }
+            )
+
+    def _check_secret(self, event=None):
+        for rel in self.model.relations["client-secret"]:
+            if "client-secret" not in rel.data[self.model.app]:
+                rel.data[self.model.app]["client-secret"] = _gen_pass()
+            return rel.data[self.model.app]["client-secret"]
+        else:
+            raise CheckFailed("Waiting for Client Secret", WaitingStatus)
+
+
+def _gen_pass() -> str:
+    return "".join(choices(ascii_uppercase + digits, k=30))
+
+
+class CheckFailed(Exception):
+    """ Raise this exception if one of the checks in main fails. """
+
+    def __init__(self, msg, status_type=None):
+        super().__init__()
+
+        self.msg = msg
+        self.status_type = status_type
+        self.status = status_type(msg)
 
 
 if __name__ == "__main__":

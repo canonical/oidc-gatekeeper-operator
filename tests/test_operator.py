@@ -1,3 +1,6 @@
+# Copyright 2021 Canonical Ltd.
+# See LICENSE file for licensing details.
+
 import pytest
 from ops.model import ActiveStatus, BlockedStatus
 from ops.testing import Harness
@@ -9,11 +12,6 @@ from charm import Operator
 @pytest.fixture
 def harness():
     return Harness(Operator)
-
-
-def test_not_leader(harness):
-    harness.begin()
-    assert harness.charm.model.unit.status == ActiveStatus()
 
 
 def test_missing_image(harness):
