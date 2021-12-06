@@ -2,7 +2,6 @@
 # See LICENSE file for licensing details.
 
 name: oidc-gatekeeper
-display-name: OIDC Gatekeeper
 summary: OIDC Gatekeeper
 description: |
   An HTTP Server that an API Gateway (eg Ambassador, Envoy)
