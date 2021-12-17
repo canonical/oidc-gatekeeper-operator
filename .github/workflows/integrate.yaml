@@ -69,8 +69,8 @@ jobs:
     - name: Deploy related charms
       run: |
         set -eux
-        juju deploy cs:dex-auth
-        juju deploy cs:istio-pilot
+        juju deploy ch:dex-auth
+        juju deploy ch:istio-pilot
         juju wait -wvt 300
 
     - name: Deploy charm

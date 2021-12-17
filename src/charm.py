@@ -121,8 +121,9 @@ class Operator(CharmBase):
                     "service": self.model.app.name,
                     "port": self.model.config["port"],
                     "allowed-request-headers": [
+                        "authorization",
                         "cookie",
-                        "X-Auth-Token",
+                        "x-auth-token",
                     ],
                     "allowed-response-headers": ["kubeflow-userid"],
                 }
