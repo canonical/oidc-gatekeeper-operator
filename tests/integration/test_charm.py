@@ -26,7 +26,7 @@ async def test_build_and_deploy(ops_test: OpsTest):
     resources = {"oci-image": image_path}
 
     await ops_test.model.deploy(
-        charm_under_test, resources=resources, application_name=APP_NAME, trust=True, 
+        charm_under_test, resources=resources, application_name=APP_NAME, trust=True,
         config=OIDC_CONFIG
     )
     await ops_test.model.wait_for_idle(
