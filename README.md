@@ -29,8 +29,6 @@ Charmed Kubeflow offers a centralised, browser-based MLOps platform that runs on
 
 Learn more about deploying and using Charmed Kubeflow at [https://charmed-kubeflow.io](https://charmed-kubeflow.io).
 
-<br/>
-
 ### Key features
 * Centralised, browser-based data science workspaces: **familiar experience**
 * Multi user: **one environment for your whole data science team**
