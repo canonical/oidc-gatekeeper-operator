@@ -1,8 +1,10 @@
 name: CI
 
 on:
-  - push
-  - pull_request
+  push:
+    branches:
+      - main
+  pull_request:
 
 jobs:
   lint:
@@ -10,110 +12,81 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Check out code
-      uses: actions/checkout@v2
+      - name: Check out code
+        uses: actions/checkout@v2
 
-    - name: Install dependencies
-      run: sudo apt-get install python3-pip tox
+      - name: Install dependencies
+        run: sudo apt-get install python3-pip tox
 
-    - name: Lint code
-      run: tox -e lint
+      - name: Lint code
+        run: tox -e lint
 
   unit:
     name: Unit Test
     runs-on: ubuntu-latest
 
     steps:
-    - name: Check out code
-      uses: actions/checkout@v2
+      - name: Check out code
+        uses: actions/checkout@v2
 
-    - name: Install dependencies
-      run: sudo apt-get install python3-pip tox
+      - name: Install dependencies
+        run: sudo apt-get install python3-pip tox
 
-    - name: Run unit tests
-      run: tox -e unit
-
-  deploy:
-    name: Test
+      - name: Run unit tests
+        run: tox -e unit
+  integration:
+    name: Integration Tests
     runs-on: ubuntu-latest
 
     steps:
-    - name: Check out repo
-      uses: actions/checkout@v2
+      - uses: actions/checkout@v2
+      - name: Setup operator environment
+        uses: charmed-kubernetes/actions-operator@main
+        with:
+          provider: microk8s
+          channel: 1.21/stable
+          charmcraft-channel: latest/candidate
 
-    - uses: balchua/microk8s-actions@v0.2.2
-      with:
-        addons: '["dns", "storage", "rbac"]'
-        channel: 1.21/stable
+      - name: Test
+        run: sg microk8s -c "tox -vve integration -- --model testing"
 
-    - name: Install dependencies
-      run: |
-        set -eux
-        sudo snap install charmcraft --classic --channel=latest/candidate
-        sudo snap install juju --classic
-        sudo snap install juju-helpers --classic
-        sudo snap install juju-wait --classic
-        sudo snap install yq
+        # On failure, capture debugging resources
+      - name: Get all
+        run: kubectl get all -A
+        if: failure()
 
-    # Avoid race condition with storage taking a long time to initialize
-    - name: Wait for storage
-      run: |
-        sg microk8s -c 'microk8s kubectl rollout status deployment/hostpath-provisioner -n kube-system'
+      - name: Describe deployments
+        run: kubectl describe deployments -A
+        if: failure()
 
-    - name: Bootstrap Juju
-      run: |
-        set -eux
-        sg microk8s -c 'juju bootstrap microk8s uk8s'
-        juju add-model ci-test
+      - name: Describe replicasets
+        run: kubectl describe replicasets -A
+        if: failure()
 
-    - name: Deploy related charms
-      run: |
-        set -eux
-        juju deploy cs:dex-auth
-        juju deploy cs:istio-pilot
-        juju wait -wvt 300
+      - name: Get juju status
+        run: juju status
+        if: failure()
 
-    - name: Deploy charm
-      run: |
-        set -eux
-        charmcraft pack -v --destructive-mode
-        juju deploy ./*.charm \
-          --resource oci-image=$(yq eval '.resources.oci-image.upstream-source' metadata.yaml)
-        juju relate dex-auth:oidc-client oidc-gatekeeper:oidc-client
-        juju relate istio-pilot:ingress dex-auth:ingress
-        juju relate istio-pilot:ingress oidc-gatekeeper:ingress
-        juju relate istio-pilot:ingress-auth oidc-gatekeeper:ingress-auth
-        juju wait -wvt 300
+      - name: Get oidc-gatekeeper workload logs
+        run: kubectl logs --tail 100 -nci-test -ljuju-app=oidc-gatekeeper
+        if: failure()
 
-    - name: Get all
-      run: kubectl get all -A
-      if: failure()
+      - name: Get oidc-gatekeeper operator logs
+        run: kubectl logs --tail 100 -nci-test -ljuju-operator=oidc-gatekeeper
+        if: failure()
 
-    - name: Get juju status
-      run: juju status
-      if: failure()
+      - name: Get dex-auth workload logs
+        run: kubectl logs --tail 100 -nci-test -ljuju-app=dex-auth
+        if: failure()
 
-    - name: Get oidc-gatekeeper workload logs
-      run: kubectl logs --tail 100 -nci-test -ljuju-app=oidc-gatekeeper
-      if: failure()
+      - name: Get dex-auth operator logs
+        run: kubectl logs --tail 100 -nci-test -ljuju-operator=dex-auth
+        if: failure()
 
-    - name: Get oidc-gatekeeper operator logs
-      run: kubectl logs --tail 100 -nci-test -ljuju-operator=oidc-gatekeeper
-      if: failure()
+      - name: Get istio-pilot workload logs
+        run: kubectl logs --tail 100 -nci-test -ljuju-app=istio-pilot
+        if: failure()
 
-    - name: Get dex-auth workload logs
-      run: kubectl logs --tail 100 -nci-test -ljuju-app=dex-auth
-      if: failure()
-
-    - name: Get dex-auth operator logs
-      run: kubectl logs --tail 100 -nci-test -ljuju-operator=dex-auth
-      if: failure()
-
-    - name: Get istio-pilot workload logs
-      run: kubectl logs --tail 100 -nci-test -ljuju-app=istio-pilot
-      if: failure()
-
-    - name: Get istio-pilot operator logs
-      run: kubectl logs --tail 100 -nci-test -ljuju-operator=istio-pilot
-      if: failure()
-
+      - name: Get istio-pilot operator logs
+        run: kubectl logs --tail 100 -nci-test -ljuju-operator=istio-pilot
+        if: failure()
