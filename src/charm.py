@@ -52,6 +52,8 @@ class Operator(CharmBase):
         self._configure_mesh(interfaces)
 
         public_url = self.model.config["public-url"]
+        if not public_url.startswith(("http://", "https://")):
+            public_url = f"http://{public_url}"
         port = self.model.config["port"]
         oidc_scopes = self.model.config["oidc-scopes"]
 
