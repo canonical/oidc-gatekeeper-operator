@@ -60,3 +60,43 @@ def test_with_relation(harness):
 
     _ = harness.get_pod_spec()
     assert isinstance(harness.charm.model.unit.status, ActiveStatus)
+
+
+def test_public_url_prepend_http(harness):
+    harness.set_leader(True)
+    harness.add_oci_resource(
+        "oci-image",
+        {
+            "registrypath": "ci-test",
+            "username": "",
+            "password": "",
+        },
+    )
+    harness.update_config({"public-url": "10.64.140.43.nip.io"})
+    harness.begin_with_initial_hooks()
+
+    pod_spec, _ = harness.get_pod_spec()
+
+    assert pod_spec["containers"][0]["envConfig"]["OIDC_PROVIDER"].startswith(
+        "http://10.64.140.43.nip.io"
+    )
+
+
+def test_public_url_keep_existing_protocol(harness):
+    harness.set_leader(True)
+    harness.add_oci_resource(
+        "oci-image",
+        {
+            "registrypath": "ci-test",
+            "username": "",
+            "password": "",
+        },
+    )
+    harness.update_config({"public-url": "https://10.64.140.43.nip.io"})
+    harness.begin_with_initial_hooks()
+
+    pod_spec, _ = harness.get_pod_spec()
+
+    assert pod_spec["containers"][0]["envConfig"]["OIDC_PROVIDER"].startswith(
+        "https://10.64.140.43.nip.io"
+    )

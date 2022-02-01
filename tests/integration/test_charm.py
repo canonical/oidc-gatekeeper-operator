@@ -12,7 +12,6 @@ APP_NAME = METADATA["name"]
 OIDC_CONFIG = {
     "client-name": "Ambassador Auth OIDC",
     "client-secret": "oidc-client-secret",
-    "public-url": "10.64.140.43.nip.io",
 }
 
 
