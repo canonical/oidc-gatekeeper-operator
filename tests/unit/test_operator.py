@@ -77,8 +77,9 @@ def test_public_url_prepend_http(harness):
 
     pod_spec, _ = harness.get_pod_spec()
 
-    assert pod_spec["containers"][0]["envConfig"]["OIDC_PROVIDER"].startswith(
-        "http://10.64.140.43.nip.io"
+    assert (
+        pod_spec["containers"][0]["envConfig"]["OIDC_PROVIDER"]
+        == "http://10.64.140.43.nip.io/dex"
     )
 
 
