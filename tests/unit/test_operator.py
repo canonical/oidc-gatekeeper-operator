@@ -98,6 +98,7 @@ def test_public_url_keep_existing_protocol(harness):
 
     pod_spec, _ = harness.get_pod_spec()
 
-    assert pod_spec["containers"][0]["envConfig"]["OIDC_PROVIDER"].startswith(
-        "https://10.64.140.43.nip.io"
+    assert (
+        pod_spec["containers"][0]["envConfig"]["OIDC_PROVIDER"]
+        == "https://10.64.140.43.nip.io/dex"
     )
