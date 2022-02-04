@@ -42,9 +42,7 @@ async def test_relations(ops_test: OpsTest):
     await ops_test.model.deploy(dex_auth)
     await ops_test.model.add_relation(istio_pilot, dex_auth)
     await ops_test.model.add_relation(f"{istio_pilot}:ingress", f"{APP_NAME}:ingress")
-    await ops_test.model.add_relation(
-        f"{istio_pilot}:ingress-auth", f"{APP_NAME}:ingress-auth"
-    )
+    await ops_test.model.add_relation(f"{istio_pilot}:ingress-auth", f"{APP_NAME}:ingress-auth")
 
     await ops_test.model.wait_for_idle(
         [APP_NAME, istio_pilot, dex_auth],
