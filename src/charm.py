@@ -6,11 +6,10 @@ import logging
 from random import choices
 from string import ascii_uppercase, digits
 
+from oci_image import OCIImageResource, OCIImageResourceError
 from ops.charm import CharmBase
 from ops.main import main
-from ops.model import ActiveStatus, MaintenanceStatus, WaitingStatus, BlockedStatus
-
-from oci_image import OCIImageResource, OCIImageResourceError
+from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
 from serialized_data_interface import (
     NoCompatibleVersions,
     NoVersionsListed,
@@ -160,7 +159,7 @@ def _gen_pass() -> str:
 
 
 class CheckFailed(Exception):
-    """ Raise this exception if one of the checks in main fails. """
+    """Raise this exception if one of the checks in main fails."""
 
     def __init__(self, msg, status_type=None):
         super().__init__()
