@@ -8,6 +8,7 @@ description: |
 
   https://journal.arrikto.com/kubeflow-authentication-with-istio-dex-5eafdfac4782
 series: [kubernetes]
+min-juju-version: "2.9.0"
 resources:
   oci-image:
     type: oci-image
