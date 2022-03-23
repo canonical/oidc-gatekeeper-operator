@@ -25,7 +25,8 @@ class Operator(CharmBase):
         self.image = OCIImageResource(self, "oci-image")
 
         for event in [
-            self.on.install,
+            self.on.start,
+            self.on.leader_elected,
             self.on.upgrade_charm,
             self.on.config_changed,
             self.on["ingress"].relation_changed,
@@ -36,6 +37,10 @@ class Operator(CharmBase):
             self.framework.observe(event, self.main)
 
     def main(self, event):
+        if not self.unit.is_leader():
+            self.model.unit.status = WaitingStatus("Waiting for Leadership")
+            exit()
+
         try:
             interfaces = self._get_interfaces()
 
@@ -164,9 +169,9 @@ class CheckFailed(Exception):
     def __init__(self, msg, status_type=None):
         super().__init__()
 
-        self.msg = msg
+        self.msg = str(msg)
         self.status_type = status_type
-        self.status = status_type(msg)
+        self.status = status_type(self.msg)
 
 
 if __name__ == "__main__":
