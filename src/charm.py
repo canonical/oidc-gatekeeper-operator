@@ -37,11 +37,9 @@ class Operator(CharmBase):
             self.framework.observe(event, self.main)
 
     def main(self, event):
-        if not self.unit.is_leader():
-            self.model.unit.status = WaitingStatus("Waiting for Leadership")
-            exit()
-
         try:
+            self._check_leader()
+
             interfaces = self._get_interfaces()
 
             secret_key = self._check_secret()
@@ -90,6 +88,11 @@ class Operator(CharmBase):
         )
 
         self.model.unit.status = ActiveStatus()
+
+    def _check_leader(self):
+        if not self.unit.is_leader():
+            self.log.info("Not a leader, skipping set_pod_spec")
+            raise CheckFailed("Waiting for leadership", WaitingStatus)
 
     def _get_interfaces(self):
         try:
