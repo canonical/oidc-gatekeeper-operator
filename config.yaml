@@ -26,4 +26,19 @@ options:
     type: string
     default: 'profile email groups'
     description: OpenID Connect scopes
-  
+  ca-bundle:
+    type: string
+    default: ''
+    description: |
+      Custom CA to be trusted by OIDC gatekeeper. It is suggested to have the config:
+        ca-bundle: |
+          -----BEGIN CERTIFICATE-----
+          ....
+          -----END CERTIFICATE-----
+  skip-auth-urls:
+    type: string
+    default: ''
+    description: |
+      If not empty, this is a comma-separated list of paths, e.g. "/path1/,/path2/".
+      That list defines which paths do not need to be authenticated on OIDC.
+      The DEX path is always added to this list.

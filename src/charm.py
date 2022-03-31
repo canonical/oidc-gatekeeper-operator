@@ -61,33 +61,56 @@ class Operator(CharmBase):
 
         self.model.unit.status = MaintenanceStatus("Setting pod spec")
 
-        self.model.pod.set_spec(
+        skip_urls = self.model.config["skip-auth-urls"] or ""
+
+        pod_spec = {
+            "version": 3,
+            "containers": [
+                {
+                    "name": "oidc-gatekeeper",
+                    "imageDetails": image_details,
+                    "ports": [{"name": "http", "containerPort": port}],
+                    "envConfig": {
+                        "CLIENT_ID": self.model.config["client-id"],
+                        "CLIENT_SECRET": secret_key,
+                        "DISABLE_USERINFO": True,
+                        "OIDC_PROVIDER": f"{public_url}/dex",
+                        "OIDC_SCOPES": oidc_scopes,
+                        "SERVER_PORT": port,
+                        "USERID_HEADER": "kubeflow-userid",
+                        "USERID_PREFIX": "",
+                        "SESSION_STORE_PATH": "bolt.db",
+                        "SKIP_AUTH_URLS": "/dex/" if len(skip_urls) == 0 else "/dex/," + skip_urls,
+                        "AUTHSERVICE_URL_PREFIX": "/authservice/",
+                    },
+                }
+            ],
+        }
+
+        pod_spec = self._set_ca_config(pod_spec)
+
+        self.model.pod.set_spec(pod_spec)
+        self.model.unit.status = ActiveStatus()
+
+    def _set_ca_config(self, pod_spec):
+        if len(self.model.config["ca-bundle"] or "") == 0:
+            return pod_spec
+
+        pod_spec["containers"][0]["volumeConfig"] = [
             {
-                "version": 3,
-                "containers": [
+                "name": "oidc-gatekeeper-ca-bundle",
+                "mountPath": "/etc/certs/oidc/",
+                "files": [
                     {
-                        "name": "oidc-gatekeeper",
-                        "imageDetails": image_details,
-                        "ports": [{"name": "http", "containerPort": port}],
-                        "envConfig": {
-                            "CLIENT_ID": self.model.config["client-id"],
-                            "CLIENT_SECRET": secret_key,
-                            "DISABLE_USERINFO": True,
-                            "OIDC_PROVIDER": f"{public_url}/dex",
-                            "OIDC_SCOPES": oidc_scopes,
-                            "SERVER_PORT": port,
-                            "USERID_HEADER": "kubeflow-userid",
-                            "USERID_PREFIX": "",
-                            "SESSION_STORE_PATH": "bolt.db",
-                            "SKIP_AUTH_URLS": "/dex/",
-                            "AUTHSERVICE_URL_PREFIX": "/authservice/",
-                        },
+                        "path": "root-ca.pem",
+                        "content": self.model.config["ca-bundle"],
                     }
                 ],
             }
-        )
-
-        self.model.unit.status = ActiveStatus()
+        ]
+        pod_spec["containers"][0]["envConfig"]["CA_BUNDLE"] = \
+            "/etc/certs/oidc/root-ca.pem"
+        return pod_spec
 
     def _check_leader(self):
         if not self.unit.is_leader():
