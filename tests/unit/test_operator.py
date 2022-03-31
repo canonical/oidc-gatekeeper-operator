@@ -3,7 +3,7 @@
 
 import pytest
 import yaml
-from ops.model import ActiveStatus, BlockedStatus
+from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
 from ops.testing import Harness
 
 from charm import Operator
@@ -12,6 +12,11 @@ from charm import Operator
 @pytest.fixture
 def harness():
     return Harness(Operator)
+
+
+def test_not_leader(harness):
+    harness.begin_with_initial_hooks()
+    assert harness.charm.model.unit.status == WaitingStatus("Waiting for leadership")
 
 
 def test_missing_image(harness):
