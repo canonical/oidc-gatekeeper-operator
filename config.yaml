@@ -24,6 +24,5 @@ options:
     description: Publicly-accessible endpoint for cluster
   oidc-scopes:
     type: string
-    default: 'profile email groups'
+    default: 'profile,email,groups'
     description: OpenID Connect scopes
-  
