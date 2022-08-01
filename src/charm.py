@@ -79,6 +79,7 @@ class Operator(CharmBase):
                             "USERID_HEADER": "kubeflow-userid",
                             "USERID_PREFIX": "",
                             "SESSION_STORE_PATH": "bolt.db",
+                            "OIDC_STATE_STORE_PATH": "bolt.db",
                             "SKIP_AUTH_URLS": "/dex/",
                             "AUTHSERVICE_URL_PREFIX": "/authservice/",
                         },
