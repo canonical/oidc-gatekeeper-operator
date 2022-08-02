@@ -121,10 +121,7 @@ def test_skip_auth_url_config_has_value(harness):
 
     pod_spec, _ = harness.get_pod_spec()
 
-    assert (
-        pod_spec["containers"][0]["envConfig"]["SKIP_AUTH_URLS"]
-        == "/dex/,/test/,/path1/"
-    )
+    assert pod_spec["containers"][0]["envConfig"]["SKIP_AUTH_URLS"] == "/dex/,/test/,/path1/"
 
 
 def test_skip_auth_url_config_is_empty(harness):
@@ -141,10 +138,7 @@ def test_skip_auth_url_config_is_empty(harness):
 
     pod_spec, _ = harness.get_pod_spec()
 
-    assert (
-        pod_spec["containers"][0]["envConfig"]["SKIP_AUTH_URLS"]
-        == "/dex/"
-    )
+    assert pod_spec["containers"][0]["envConfig"]["SKIP_AUTH_URLS"] == "/dex/"
 
 
 def test_ca_bundle_config(harness):
@@ -162,7 +156,4 @@ def test_ca_bundle_config(harness):
 
     pod_spec, _ = harness.get_pod_spec()
 
-    assert (
-        pod_spec["containers"][0]["envConfig"]["CA_BUNDLE"]
-        == "/etc/certs/oidc/root-ca.pem"
-    )
+    assert pod_spec["containers"][0]["envConfig"]["CA_BUNDLE"] == "/etc/certs/oidc/root-ca.pem"
