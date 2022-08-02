@@ -93,7 +93,7 @@ class Operator(CharmBase):
         self.model.unit.status = ActiveStatus()
 
     def _set_ca_config(self, pod_spec):
-        if len(self.model.config["ca-bundle"] or "") == 0:
+        if not self.model.config["ca-bundle"]:
             return pod_spec
 
         pod_spec["containers"][0]["volumeConfig"] = [
@@ -108,8 +108,7 @@ class Operator(CharmBase):
                 ],
             }
         ]
-        pod_spec["containers"][0]["envConfig"]["CA_BUNDLE"] = \
-            "/etc/certs/oidc/root-ca.pem"
+        pod_spec["containers"][0]["envConfig"]["CA_BUNDLE"] = "/etc/certs/oidc/root-ca.pem"
         return pod_spec
 
     def _check_leader(self):
