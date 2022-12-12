@@ -1,9 +1,6 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-pytest
-flake8
-flake8-copyright<0.3
-pyproject-flake8
-black
-isort
+ops
+oci-image
+serialized-data-interface<0.4
