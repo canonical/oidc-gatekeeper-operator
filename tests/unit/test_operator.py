@@ -157,3 +157,33 @@ def test_ca_bundle_config(harness):
     pod_spec, _ = harness.get_pod_spec()
 
     assert pod_spec["containers"][0]["envConfig"]["CA_BUNDLE"] == "/etc/certs/oidc/root-ca.pem"
+
+
+def test_session_store_path(harness):
+    harness.set_leader(True)
+    harness.add_oci_resource(
+        "oci-image",
+        {
+            "registrypath": "ci-test",
+            "username": "",
+            "password": "",
+        },
+    )
+    harness.begin_with_initial_hooks()
+    pod_spec, _ = harness.get_pod_spec()
+    assert pod_spec["containers"][0]["envConfig"]["SESSION_STORE_PATH"] == "bolt.db"
+
+
+def test_oidc_state_store_path(harness):
+    harness.set_leader(True)
+    harness.add_oci_resource(
+        "oci-image",
+        {
+            "registrypath": "ci-test",
+            "username": "",
+            "password": "",
+        },
+    )
+    harness.begin_with_initial_hooks()
+    pod_spec, _ = harness.get_pod_spec()
+    assert pod_spec["containers"][0]["envConfig"]["OIDC_STATE_STORE_PATH"] == "oidc_state.db"
