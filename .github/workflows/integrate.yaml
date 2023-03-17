@@ -14,6 +14,7 @@ jobs:
     secrets: inherit
     with:
         charm-path: "."
+
   lint:
     name: Lint Check
     runs-on: ubuntu-20.04
