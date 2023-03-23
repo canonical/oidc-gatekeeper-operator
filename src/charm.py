@@ -79,6 +79,7 @@ class Operator(CharmBase):
                         "OIDC_STATE_STORE_PATH": "oidc_state.db",  # Added to fix https://github.com/canonical/oidc-gatekeeper-operator/issues/64  # noqa E501
                         "SKIP_AUTH_URLS": "/dex/" if len(skip_urls) == 0 else "/dex/," + skip_urls,
                         "AUTHSERVICE_URL_PREFIX": "/authservice/",
+                        "AFTER_LOGOUT_URL": self.model.config["public-url"]
                     },
                 }
             ],
