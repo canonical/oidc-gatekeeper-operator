@@ -14,9 +14,7 @@ async-timeout==4.0.2
     # via aiohttp
 attrs==22.1.0
     # via
-    #   -r ./requirements.txt
     #   aiohttp
-    #   jsonschema
     #   pytest
 backcall==0.2.0
     # via ipython
@@ -26,7 +24,6 @@ cachetools==5.2.0
     # via google-auth
 certifi==2022.12.7
     # via
-    #   -r ./requirements.txt
     #   kubernetes
     #   requests
 cffi==1.15.1
@@ -34,9 +31,7 @@ cffi==1.15.1
     #   cryptography
     #   pynacl
 chardet==3.0.4
-    # via
-    #   -r ./requirements.txt
-    #   requests
+    # via requests
 charset-normalizer==2.1.1
     # via aiohttp
 cryptography==38.0.4
@@ -57,7 +52,6 @@ google-auth==2.15.0
     # via kubernetes
 idna==2.10
     # via
-    #   -r ./requirements.txt
     #   requests
     #   yarl
 iniconfig==1.1.1
@@ -72,10 +66,6 @@ jinja2==3.1.2
     # via
     #   -r ./requirements-integration.in
     #   pytest-operator
-jsonschema==3.2.0
-    # via
-    #   -r ./requirements.txt
-    #   serialized-data-interface
 juju==3.0.4
     # via
     #   -r ./requirements-integration.in
@@ -103,9 +93,7 @@ oauthlib==3.2.2
 oci-image==1.0.0
     # via -r ./requirements.txt
 ops==1.5.4
-    # via
-    #   -r ./requirements.txt
-    #   serialized-data-interface
+    # via -r ./requirements.txt
 packaging==22.0
     # via pytest
 paramiko==2.12.0
@@ -148,10 +136,6 @@ pyrfc3339==1.1
     # via
     #   juju
     #   macaroonbakery
-pyrsistent==0.19.2
-    # via
-    #   -r ./requirements.txt
-    #   jsonschema
 pytest==7.2.0
     # via
     #   pytest-asyncio
@@ -172,28 +156,21 @@ pyyaml==5.4
     #   kubernetes
     #   ops
     #   pytest-operator
-    #   serialized-data-interface
 requests==2.25.0
     # via
     #   -r ./requirements-integration.in
-    #   -r ./requirements.txt
     #   kubernetes
     #   macaroonbakery
     #   requests-oauthlib
-    #   serialized-data-interface
     #   theblues
 requests-oauthlib==1.3.1
     # via kubernetes
 rsa==4.9
     # via google-auth
-serialized-data-interface==0.3.5
-    # via -r ./requirements.txt
 six==1.16.0
     # via
-    #   -r ./requirements.txt
     #   asttokens
     #   google-auth
-    #   jsonschema
     #   kubernetes
     #   macaroonbakery
     #   paramiko
@@ -219,7 +196,6 @@ typing-inspect==0.8.0
     # via juju
 urllib3==1.26.13
     # via
-    #   -r ./requirements.txt
     #   kubernetes
     #   requests
 wcwidth==0.2.5

@@ -38,7 +38,7 @@ async def test_build_and_deploy(ops_test: OpsTest):
 
 @pytest.mark.abort_on_fail
 async def test_relations(ops_test: OpsTest):
-    await ops_test.model.deploy(ISTIO_PILOT, channel="1.16/stable", trust=True)
+    await ops_test.model.deploy(ISTIO_PILOT, channel="1.5/stable", trust=True)
     await ops_test.model.deploy(DEX_AUTH, channel="latest/edge", trust=True)
     await ops_test.model.add_relation(ISTIO_PILOT, DEX_AUTH)
     await ops_test.model.add_relation(f"{ISTIO_PILOT}:ingress", f"{APP_NAME}:ingress")
