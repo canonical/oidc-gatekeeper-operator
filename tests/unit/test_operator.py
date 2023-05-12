@@ -1,5 +1,6 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
+from pathlib import Path
 
 import pytest
 import yaml
@@ -8,10 +9,12 @@ from ops.testing import Harness
 
 from charm import Operator
 
+metadata_file = Path(__file__).parent.parent.parent / "metadata.yaml"
+
 
 @pytest.fixture
 def harness():
-    return Harness(Operator)
+    return Harness(Operator, meta=metadata_file.read_text())
 
 
 def test_not_leader(harness):
@@ -21,12 +24,16 @@ def test_not_leader(harness):
 
 def test_missing_image(harness):
     harness.set_leader(True)
+    harness.add_relation("ingress", "istio-pilot")
+    harness.add_relation("ingress-auth", "istio-pilot")
     harness.begin_with_initial_hooks()
     assert harness.charm.model.unit.status == BlockedStatus("Missing resource: oci-image")
 
 
 def test_no_relation(harness):
     harness.set_leader(True)
+    harness.add_relation("ingress", "istio-pilot")
+    harness.add_relation("ingress-auth", "istio-pilot")
     harness.add_oci_resource(
         "oci-image",
         {
@@ -42,6 +49,8 @@ def test_no_relation(harness):
 
 def test_with_relation(harness):
     harness.set_leader(True)
+    rel_id = harness.add_relation("ingress", "istio-pilot")
+    harness.add_relation("ingress-auth", "istio-pilot")
     harness.add_oci_resource(
         "oci-image",
         {
@@ -50,13 +59,12 @@ def test_with_relation(harness):
             "password": "",
         },
     )
-    rel_id = harness.add_relation("ingress", "app")
 
-    harness.add_relation_unit(rel_id, "app/0")
+    harness.add_relation_unit(rel_id, "istio-pilot/0")
     data = {"service-name": "service-name", "service-port": "6666"}
     harness.update_relation_data(
         rel_id,
-        "app",
+        "istio-pilot",
         {"_supported_versions": "- v1", "data": yaml.dump(data)},
     )
     harness.begin_with_initial_hooks()
@@ -67,6 +75,9 @@ def test_with_relation(harness):
 
 def test_public_url_prepend_http(harness):
     harness.set_leader(True)
+    harness.add_relation("ingress", "istio-pilot")
+    harness.add_relation("ingress-auth", "istio-pilot")
+    harness.add_relation("oidc-client", "dex-auth")
     harness.add_oci_resource(
         "oci-image",
         {
@@ -87,6 +98,9 @@ def test_public_url_prepend_http(harness):
 
 def test_public_url_keep_existing_protocol(harness):
     harness.set_leader(True)
+    harness.add_relation("ingress", "istio-pilot")
+    harness.add_relation("ingress-auth", "istio-pilot")
+    harness.add_relation("oidc-client", "dex-auth")
     harness.add_oci_resource(
         "oci-image",
         {
@@ -108,6 +122,8 @@ def test_public_url_keep_existing_protocol(harness):
 
 def test_skip_auth_url_config_has_value(harness):
     harness.set_leader(True)
+    harness.add_relation("ingress", "istio-pilot")
+    harness.add_relation("ingress-auth", "istio-pilot")
     harness.add_oci_resource(
         "oci-image",
         {
@@ -124,25 +140,10 @@ def test_skip_auth_url_config_has_value(harness):
     assert pod_spec["containers"][0]["envConfig"]["SKIP_AUTH_URLS"] == "/dex/,/test/,/path1/"
 
 
-def test_skip_auth_url_config_is_empty(harness):
-    harness.set_leader(True)
-    harness.add_oci_resource(
-        "oci-image",
-        {
-            "registrypath": "ci-test",
-            "username": "",
-            "password": "",
-        },
-    )
-    harness.begin_with_initial_hooks()
-
-    pod_spec, _ = harness.get_pod_spec()
-
-    assert pod_spec["containers"][0]["envConfig"]["SKIP_AUTH_URLS"] == "/dex/"
-
-
 def test_ca_bundle_config(harness):
     harness.set_leader(True)
+    harness.add_relation("ingress", "istio-pilot")
+    harness.add_relation("ingress-auth", "istio-pilot")
     harness.add_oci_resource(
         "oci-image",
         {
@@ -159,8 +160,10 @@ def test_ca_bundle_config(harness):
     assert pod_spec["containers"][0]["envConfig"]["CA_BUNDLE"] == "/etc/certs/oidc/root-ca.pem"
 
 
-def test_session_store_path(harness):
+def test_env_configs(harness):
     harness.set_leader(True)
+    harness.add_relation("ingress", "istio-pilot")
+    harness.add_relation("ingress-auth", "istio-pilot")
     harness.add_oci_resource(
         "oci-image",
         {
@@ -172,18 +175,5 @@ def test_session_store_path(harness):
     harness.begin_with_initial_hooks()
     pod_spec, _ = harness.get_pod_spec()
     assert pod_spec["containers"][0]["envConfig"]["SESSION_STORE_PATH"] == "bolt.db"
-
-
-def test_oidc_state_store_path(harness):
-    harness.set_leader(True)
-    harness.add_oci_resource(
-        "oci-image",
-        {
-            "registrypath": "ci-test",
-            "username": "",
-            "password": "",
-        },
-    )
-    harness.begin_with_initial_hooks()
-    pod_spec, _ = harness.get_pod_spec()
     assert pod_spec["containers"][0]["envConfig"]["OIDC_STATE_STORE_PATH"] == "oidc_state.db"
+    assert pod_spec["containers"][0]["envConfig"]["SKIP_AUTH_URLS"] == "/dex/"

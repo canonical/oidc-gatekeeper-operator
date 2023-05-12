@@ -10,7 +10,6 @@ from oci_image import OCIImageResource, OCIImageResourceError
 from ops.charm import CharmBase
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
-from serialized_data_interface import NoCompatibleVersions, NoVersionsListed, get_interfaces
 
 
 class Operator(CharmBase):
@@ -36,8 +35,6 @@ class Operator(CharmBase):
         try:
             self._check_leader()
 
-            interfaces = self._get_interfaces()
-
             secret_key = self._check_secret()
 
             image_details = self._check_image_details()
@@ -46,8 +43,8 @@ class Operator(CharmBase):
             self.model.unit.status = error.status
             return
 
-        self._send_info(interfaces, secret_key)
-        self._configure_mesh(interfaces)
+        self._send_info(secret_key)
+        self._configure_mesh()
 
         public_url = self.model.config["public-url"]
         if not public_url.startswith(("http://", "https://")):
@@ -114,15 +111,6 @@ class Operator(CharmBase):
             self.log.info("Not a leader, skipping set_pod_spec")
             raise CheckFailed("Waiting for leadership", WaitingStatus)
 
-    def _get_interfaces(self):
-        try:
-            interfaces = get_interfaces(self)
-        except NoVersionsListed as err:
-            raise CheckFailed(str(err), WaitingStatus)
-        except NoCompatibleVersions as err:
-            raise CheckFailed(str(err), BlockedStatus)
-        return interfaces
-
     def _check_image_details(self):
         try:
             image_details = self.image.fetch()
@@ -134,44 +122,44 @@ class Operator(CharmBase):
         if not self.model.config.get("public-url"):
             raise CheckFailed("public-url config required", BlockedStatus)
 
-    def _configure_mesh(self, interfaces):
-        if interfaces["ingress"]:
-            interfaces["ingress"].send_data(
-                {
-                    "prefix": "/authservice",
-                    "rewrite": "/",
-                    "service": self.model.app.name,
-                    "port": self.model.config["port"],
-                }
+    def _configure_mesh(self):
+        ingress_relation = self.model.get_relation("ingress")
+        if ingress_relation:
+            ingress_relation.data[self.app]["service"] = self.model.app.name
+            ingress_relation.data[self.app]["port"] = str(self.model.config["port"])
+            ingress_relation.data[self.app]["prefix"] = "/authservice"
+            ingress_relation.data[self.app]["rewrite"] = "/"
+
+        ingress_auth_relation = self.model.get_relation("ingress-auth")
+        if ingress_auth_relation:
+            ingress_auth_relation.data[self.app]["service"] = self.model.app.name
+            ingress_auth_relation.data[self.app]["port"] = str(self.model.config["port"])
+            ingress_auth_relation.data[self.app]["allowed-request-headers"] = str(
+                [
+                    "cookie",
+                    "X-Auth-Token",
+                ]
             )
-        if interfaces["ingress-auth"]:
-            interfaces["ingress-auth"].send_data(
-                {
-                    "service": self.model.app.name,
-                    "port": self.model.config["port"],
-                    "allowed-request-headers": [
-                        "cookie",
-                        "X-Auth-Token",
-                    ],
-                    "allowed-response-headers": ["kubeflow-userid"],
-                }
+            ingress_auth_relation.data[self.app]["allowed-response-headers"] = str(
+                [
+                    "kubeflow-userid",
+                ]
             )
 
-    def _send_info(self, interfaces, secret_key):
+    def _send_info(self, secret_key):
         config = self.model.config
 
         if not config.get("public-url"):
             return False
 
-        if interfaces["oidc-client"]:
-            interfaces["oidc-client"].send_data(
-                {
-                    "id": config["client-id"],
-                    "name": config["client-name"],
-                    "redirectURIs": ["/authservice/oidc/callback"],
-                    "secret": secret_key,
-                }
+        oids_client_relation = self.model.get_relation("oidc-client")
+        if oids_client_relation:
+            oids_client_relation.data[self.app]["id"] = config["client-id"]
+            oids_client_relation.data[self.app]["secret"] = secret_key
+            oids_client_relation.data[self.app]["redirectURIs"] = str(
+                ["/authservice/oidc/callback"]
             )
+            oids_client_relation.data[self.app]["name"] = config["client-name"]
 
     def _check_secret(self, event=None):
         for rel in self.model.relations["client-secret"]:
