@@ -125,26 +125,29 @@ class Operator(CharmBase):
     def _configure_mesh(self):
         ingress_relation = self.model.get_relation("ingress")
         if ingress_relation:
-            ingress_relation.data[self.app]["service"] = self.model.app.name
-            ingress_relation.data[self.app]["port"] = str(self.model.config["port"])
-            ingress_relation.data[self.app]["prefix"] = "/authservice"
-            ingress_relation.data[self.app]["rewrite"] = "/"
+            data = {
+                    "prefix": "/authservice",
+                    "rewrite": "/",
+                    "service": self.model.app.name,
+                    "port": self.model.config["port"],
+                }
+
+            ingress_relation.data[self.app]["data"] = str(data)
+            ingress_relation.data[self.app]["versions"] = "-v2"
 
         ingress_auth_relation = self.model.get_relation("ingress-auth")
         if ingress_auth_relation:
-            ingress_auth_relation.data[self.app]["service"] = self.model.app.name
-            ingress_auth_relation.data[self.app]["port"] = str(self.model.config["port"])
-            ingress_auth_relation.data[self.app]["allowed-request-headers"] = str(
-                [
-                    "cookie",
-                    "X-Auth-Token",
-                ]
-            )
-            ingress_auth_relation.data[self.app]["allowed-response-headers"] = str(
-                [
-                    "kubeflow-userid",
-                ]
-            )
+            data = {
+                    "service": self.model.app.name,
+                    "port": self.model.config["port"],
+                    "allowed-request-headers": [
+                        "cookie",
+                        "X-Auth-Token",
+                    ],
+                    "allowed-response-headers": ["kubeflow-userid"],
+                }
+            ingress_auth_relation.data[self.app]["data"] = str(data)
+            ingress_auth_relation.data[self.app]["versions"] = "-v1"
 
     def _send_info(self, secret_key):
         config = self.model.config
@@ -154,12 +157,14 @@ class Operator(CharmBase):
 
         oids_client_relation = self.model.get_relation("oidc-client")
         if oids_client_relation:
-            oids_client_relation.data[self.app]["id"] = config["client-id"]
-            oids_client_relation.data[self.app]["secret"] = secret_key
-            oids_client_relation.data[self.app]["redirectURIs"] = str(
-                ["/authservice/oidc/callback"]
-            )
-            oids_client_relation.data[self.app]["name"] = config["client-name"]
+            data = {
+                    "id": config["client-id"],
+                    "name": config["client-name"],
+                    "redirectURIs": ["/authservice/oidc/callback"],
+                    "secret": secret_key,
+                }
+            oids_client_relation.data[self.app]["data"] = str(data)
+            oids_client_relation.data[self.app]["versions"] = "-v1"
 
     def _check_secret(self, event=None):
         for rel in self.model.relations["client-secret"]:
