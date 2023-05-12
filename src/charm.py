@@ -133,7 +133,7 @@ class Operator(CharmBase):
             }
 
             ingress_relation.data[self.app]["data"] = str(data)
-            ingress_relation.data[self.app]["versions"] = "-v2"
+            ingress_relation.data[self.app]["_supported_versions"] = "- v2"
 
         ingress_auth_relation = self.model.get_relation("ingress-auth")
         if ingress_auth_relation:
@@ -147,7 +147,7 @@ class Operator(CharmBase):
                 "allowed-response-headers": ["kubeflow-userid"],
             }
             ingress_auth_relation.data[self.app]["data"] = str(data)
-            ingress_auth_relation.data[self.app]["versions"] = "-v1"
+            ingress_auth_relation.data[self.app]["_supported_versions"] = "- v1"
 
     def _send_info(self, secret_key):
         config = self.model.config
@@ -164,7 +164,7 @@ class Operator(CharmBase):
                 "secret": secret_key,
             }
             oids_client_relation.data[self.app]["data"] = str(data)
-            oids_client_relation.data[self.app]["versions"] = "-v1"
+            oids_client_relation.data[self.app]["_supported_versions"] = "- v1"
 
     def _check_secret(self, event=None):
         for rel in self.model.relations["client-secret"]:
