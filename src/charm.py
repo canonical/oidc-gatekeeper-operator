@@ -133,7 +133,7 @@ class Operator(CharmBase):
             }
 
             ingress_relation.data[self.app]["data"] = str(data)
-            ingress_relation.data[self.app]["_supported_versions"] = "- v2"
+            ingress_relation.data[self.app]["_supported_versions"] = "- v1"
 
         ingress_auth_relation = self.model.get_relation("ingress-auth")
         if ingress_auth_relation:
