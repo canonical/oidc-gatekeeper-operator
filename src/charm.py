@@ -126,11 +126,11 @@ class Operator(CharmBase):
         ingress_relation = self.model.get_relation("ingress")
         if ingress_relation:
             data = {
-                    "prefix": "/authservice",
-                    "rewrite": "/",
-                    "service": self.model.app.name,
-                    "port": self.model.config["port"],
-                }
+                "prefix": "/authservice",
+                "rewrite": "/",
+                "service": self.model.app.name,
+                "port": self.model.config["port"],
+            }
 
             ingress_relation.data[self.app]["data"] = str(data)
             ingress_relation.data[self.app]["versions"] = "-v2"
@@ -138,14 +138,14 @@ class Operator(CharmBase):
         ingress_auth_relation = self.model.get_relation("ingress-auth")
         if ingress_auth_relation:
             data = {
-                    "service": self.model.app.name,
-                    "port": self.model.config["port"],
-                    "allowed-request-headers": [
-                        "cookie",
-                        "X-Auth-Token",
-                    ],
-                    "allowed-response-headers": ["kubeflow-userid"],
-                }
+                "service": self.model.app.name,
+                "port": self.model.config["port"],
+                "allowed-request-headers": [
+                    "cookie",
+                    "X-Auth-Token",
+                ],
+                "allowed-response-headers": ["kubeflow-userid"],
+            }
             ingress_auth_relation.data[self.app]["data"] = str(data)
             ingress_auth_relation.data[self.app]["versions"] = "-v1"
 
@@ -158,11 +158,11 @@ class Operator(CharmBase):
         oids_client_relation = self.model.get_relation("oidc-client")
         if oids_client_relation:
             data = {
-                    "id": config["client-id"],
-                    "name": config["client-name"],
-                    "redirectURIs": ["/authservice/oidc/callback"],
-                    "secret": secret_key,
-                }
+                "id": config["client-id"],
+                "name": config["client-name"],
+                "redirectURIs": ["/authservice/oidc/callback"],
+                "secret": secret_key,
+            }
             oids_client_relation.data[self.app]["data"] = str(data)
             oids_client_relation.data[self.app]["versions"] = "-v1"
 
