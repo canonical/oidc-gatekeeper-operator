@@ -1,15 +1,19 @@
 #!/usr/bin/env python3
-# Copyright 2021 Canonical Ltd.
+# Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
 import logging
 from random import choices
 from string import ascii_uppercase, digits
 
-from oci_image import OCIImageResource, OCIImageResourceError
+from charmed_kubeflow_chisme.exceptions import ErrorWithStatus
+from charmed_kubeflow_chisme.pebble import update_layer
+from charms.observability_libs.v1.kubernetes_service_patch import KubernetesServicePatch
+from lightkube.models.core_v1 import ServicePort
 from ops.charm import CharmBase
 from ops.main import main
-from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
+from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
+from ops.pebble import Layer
 from serialized_data_interface import NoCompatibleVersions, NoVersionsListed, get_interfaces
 
 
@@ -17,8 +21,21 @@ class Operator(CharmBase):
     def __init__(self, *args):
         super().__init__(*args)
 
-        self.log = logging.getLogger(__name__)
-        self.image = OCIImageResource(self, "oci-image")
+        self.logger = logging.getLogger(__name__)
+        self._container_name = "oidc-authservice"
+        self._container = self.unit.get_container(self._container_name)
+        self.pebble_service_name = "oidc-authservice"
+        self._http_port = self.model.config["port"]
+
+        http_port = ServicePort(int(self._http_port), name="http-port")
+        self.service_patcher = KubernetesServicePatch(
+            self,
+            [http_port],
+        )
+
+        self.public_url = self.model.config["public-url"]
+        if not self.public_url.startswith(("http://", "https://")):
+            self.public_url = f"http://{self.public_url}"
 
         for event in [
             self.on.start,
@@ -34,105 +51,89 @@ class Operator(CharmBase):
 
     def main(self, event):
         try:
+            self._check_public_url()
             self._check_leader()
-
             interfaces = self._get_interfaces()
-
             secret_key = self._check_secret()
-
-            image_details = self._check_image_details()
-
-        except CheckFailed as error:
-            self.model.unit.status = error.status
+            self._send_info(interfaces, secret_key)
+            self._configure_mesh(interfaces)
+            update_layer(self._container_name, self._container, self._oidc_layer, self.logger)
+        except ErrorWithStatus as err:
+            self.model.unit.status = err.status
+            self.logger.error(f"Failed to handle {event} with error: {err}")
             return
 
-        self._send_info(interfaces, secret_key)
-        self._configure_mesh(interfaces)
-
-        public_url = self.model.config["public-url"]
-        if not public_url.startswith(("http://", "https://")):
-            public_url = f"http://{public_url}"
-        port = self.model.config["port"]
-        oidc_scopes = self.model.config["oidc-scopes"]
-
-        self.model.unit.status = MaintenanceStatus("Setting pod spec")
-
-        skip_urls = self.model.config["skip-auth-urls"] or ""
-
-        pod_spec = {
-            "version": 3,
-            "containers": [
-                {
-                    "name": "oidc-gatekeeper",
-                    "imageDetails": image_details,
-                    "ports": [{"name": "http", "containerPort": port}],
-                    "envConfig": {
-                        "CLIENT_ID": self.model.config["client-id"],
-                        "CLIENT_SECRET": secret_key,
-                        "DISABLE_USERINFO": True,
-                        "OIDC_PROVIDER": f"{public_url}/dex",
-                        "OIDC_SCOPES": oidc_scopes,
-                        "SERVER_PORT": port,
-                        "USERID_HEADER": "kubeflow-userid",
-                        "USERID_PREFIX": "",
-                        "SESSION_STORE_PATH": "bolt.db",
-                        "OIDC_STATE_STORE_PATH": "oidc_state.db",  # Added to fix https://github.com/canonical/oidc-gatekeeper-operator/issues/64  # noqa E501
-                        "SKIP_AUTH_URLS": "/dex/" if len(skip_urls) == 0 else "/dex/," + skip_urls,
-                        "AUTHSERVICE_URL_PREFIX": "/authservice/",
-                        "AFTER_LOGOUT_URL": self.model.config["public-url"],
-                    },
-                }
-            ],
-        }
-
-        pod_spec = self._set_ca_config(pod_spec)
-
-        self.model.pod.set_spec(pod_spec)
         self.model.unit.status = ActiveStatus()
 
-    def _set_ca_config(self, pod_spec):
-        if not self.model.config["ca-bundle"]:
-            return pod_spec
+    @property
+    def service_environment(self):
+        """Return environment variables based on model configuration."""
+        secret_key = self._check_secret()
+        skip_urls = self.model.config["skip-auth-urls"] or ""
+        dex_skip_urls = "/dex/" if not skip_urls else "/dex/," + skip_urls
 
-        pod_spec["containers"][0]["volumeConfig"] = [
-            {
-                "name": "oidc-gatekeeper-ca-bundle",
-                "mountPath": "/etc/certs/oidc/",
-                "files": [
-                    {
-                        "path": "root-ca.pem",
-                        "content": self.model.config["ca-bundle"],
-                    }
-                ],
-            }
-        ]
-        pod_spec["containers"][0]["envConfig"]["CA_BUNDLE"] = "/etc/certs/oidc/root-ca.pem"
-        return pod_spec
+        ret_env_vars = {
+            "CLIENT_ID": self.model.config["client-id"],
+            "CLIENT_SECRET": secret_key,
+            "DISABLE_USERINFO": True,
+            "OIDC_PROVIDER": f"{self.public_url}/dex",
+            "OIDC_SCOPES": self.model.config["oidc-scopes"],
+            "SERVER_PORT": self._http_port,
+            "USERID_HEADER": "kubeflow-userid",
+            "USERID_PREFIX": "",
+            "SESSION_STORE_PATH": "bolt.db",
+            # Added to fix https://github.com/canonical/oidc-gatekeeper-operator/issues/64
+            "OIDC_STATE_STORE_PATH": "oidc_state.db",
+            "SKIP_AUTH_URLS": dex_skip_urls,
+            "AUTHSERVICE_URL_PREFIX": "/authservice/",
+            "AFTER_LOGOUT_URL": self.model.config["public-url"],
+        }
+
+        if self.model.config["ca-bundle"]:
+            if self._container.can_connect():
+                self._container.push(
+                    "/etc/certs/oidc/root-ca.pem", self.model.config["ca-bundle"], make_dirs=True
+                )
+                ret_env_vars["CA_BUNDLE"] = "/etc/certs/oidc/root-ca.pem"
+
+        return ret_env_vars
+
+    @property
+    def _oidc_layer(self):
+        """Return Pebble layer for OIDC."""
+
+        pebble_layer = {
+            "summary": "OIDC Authservice",
+            "description": "pebble config layer for FastAPI demo server",
+            "services": {
+                self.pebble_service_name: {
+                    "override": "replace",
+                    "summary": "oidc-gatekeeper service",
+                    "command": "/home/authservice/oidc-authservice",
+                    "environment": self.service_environment,
+                    "startup": "enabled",
+                }
+            },
+        }
+        return Layer(pebble_layer)
 
     def _check_leader(self):
         if not self.unit.is_leader():
-            self.log.info("Not a leader, skipping set_pod_spec")
-            raise CheckFailed("Waiting for leadership", WaitingStatus)
+            self.logger.info("Not a leader, skipping")
+            raise ErrorWithStatus("Waiting for leadership", WaitingStatus)
 
     def _get_interfaces(self):
         try:
             interfaces = get_interfaces(self)
         except NoVersionsListed as err:
-            raise CheckFailed(str(err), WaitingStatus)
+            raise ErrorWithStatus(str(err), WaitingStatus)
         except NoCompatibleVersions as err:
-            raise CheckFailed(str(err), BlockedStatus)
+            raise ErrorWithStatus(str(err), BlockedStatus)
         return interfaces
-
-    def _check_image_details(self):
-        try:
-            image_details = self.image.fetch()
-        except OCIImageResourceError as e:
-            raise CheckFailed(f"{e.status_message}: oci-image", e.status_type)
-        return image_details
 
     def _check_public_url(self):
         if not self.model.config.get("public-url"):
-            raise CheckFailed("public-url config required", BlockedStatus)
+            raise ErrorWithStatus("public-url config required", BlockedStatus)
 
     def _configure_mesh(self, interfaces):
         if interfaces["ingress"]:
@@ -179,22 +180,11 @@ class Operator(CharmBase):
                 rel.data[self.model.app]["client-secret"] = _gen_pass()
             return rel.data[self.model.app]["client-secret"]
         else:
-            raise CheckFailed("Waiting for Client Secret", WaitingStatus)
+            raise ErrorWithStatus("Waiting for Client Secret", WaitingStatus)
 
 
 def _gen_pass() -> str:
     return "".join(choices(ascii_uppercase + digits, k=30))
-
-
-class CheckFailed(Exception):
-    """Raise this exception if one of the checks in main fails."""
-
-    def __init__(self, msg, status_type=None):
-        super().__init__()
-
-        self.msg = str(msg)
-        self.status_type = status_type
-        self.status = status_type(self.msg)
 
 
 if __name__ == "__main__":
