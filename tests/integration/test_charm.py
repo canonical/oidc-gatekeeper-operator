@@ -15,6 +15,7 @@ OIDC_CONFIG = {
 }
 ISTIO_PILOT = "istio-pilot"
 DEX_AUTH = "dex-auth"
+PUBLIC_URL = "test-url"
 
 
 @pytest.mark.abort_on_fail
@@ -30,8 +31,11 @@ async def test_build_and_deploy(ops_test: OpsTest):
     await ops_test.model.deploy(
         charm_under_test, resources=resources, trust=True, config=OIDC_CONFIG
     )
+
+    await ops_test.model.applications[APP_NAME].set_config({"public-url": PUBLIC_URL})
+
     await ops_test.model.wait_for_idle(
-        apps=[APP_NAME], status="active", raise_on_blocked=True, timeout=60 * 10
+        apps=[APP_NAME], status="active", raise_on_blocked=False, timeout=60 * 10
     )
     assert ops_test.model.applications[APP_NAME].units[0].workload_status == "active"
 
@@ -44,9 +48,7 @@ async def test_relations(ops_test: OpsTest):
     await ops_test.model.add_relation(f"{ISTIO_PILOT}:ingress", f"{APP_NAME}:ingress")
     await ops_test.model.add_relation(f"{ISTIO_PILOT}:ingress-auth", f"{APP_NAME}:ingress-auth")
 
-    public_url = "test-url"
-    await ops_test.model.applications[DEX_AUTH].set_config({"public-url": public_url})
-    await ops_test.model.applications[APP_NAME].set_config({"public-url": public_url})
+    await ops_test.model.applications[DEX_AUTH].set_config({"public-url": PUBLIC_URL})
 
     await ops_test.model.wait_for_idle(
         [APP_NAME, ISTIO_PILOT, DEX_AUTH],
