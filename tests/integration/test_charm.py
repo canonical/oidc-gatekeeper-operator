@@ -47,6 +47,7 @@ async def test_relations(ops_test: OpsTest):
     await ops_test.model.add_relation(ISTIO_PILOT, DEX_AUTH)
     await ops_test.model.add_relation(f"{ISTIO_PILOT}:ingress", f"{APP_NAME}:ingress")
     await ops_test.model.add_relation(f"{ISTIO_PILOT}:ingress-auth", f"{APP_NAME}:ingress-auth")
+    await ops_test.model.add_relation(f"{APP_NAME}:oidc-client", f"{DEX_AUTH}:oidc-client")
 
     await ops_test.model.applications[DEX_AUTH].set_config({"public-url": PUBLIC_URL})
 
