@@ -73,7 +73,7 @@ class TestOIDCOperator:
     async def test_upgrade(self, ops_test: OpsTest):
         await ops_test.model.remove_application(APP_NAME, block_until_done=True)
 
-        await ops_test.model.deploy(APP_NAME, channel="ckf-1.7/stable", trust=True)
+        await ops_test.model.deploy(APP_NAME, channel="ckf-1.7/stable", trust=True, config=OIDC_CONFIG)
         await ops_test.model.add_relation(f"{ISTIO_PILOT}:ingress", f"{APP_NAME}:ingress")
         await ops_test.model.add_relation(
             f"{ISTIO_PILOT}:ingress-auth", f"{APP_NAME}:ingress-auth"
@@ -81,7 +81,7 @@ class TestOIDCOperator:
         await ops_test.model.add_relation(f"{APP_NAME}:oidc-client", f"{DEX_AUTH}:oidc-client")
 
         await ops_test.model.applications[APP_NAME].refresh(
-            pytest.charm_under_test, resources=RESOURCES, config=OIDC_CONFIG
+            pytest.charm_under_test, resources=RESOURCES
         )
 
         await ops_test.model.wait_for_idle(
