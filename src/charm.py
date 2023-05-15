@@ -19,6 +19,7 @@ from serialized_data_interface import NoCompatibleVersions, NoVersionsListed, ge
 
 class OIDCGatekeeperOperator(CharmBase):
     """Charm OIDC Gatekeeper Operator."""
+
     def __init__(self, *args):
         super().__init__(*args)
 
