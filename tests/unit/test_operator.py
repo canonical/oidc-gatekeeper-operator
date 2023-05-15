@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 import pytest
 import yaml
-from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
+from ops.model import ActiveStatus, WaitingStatus
 from ops.testing import Harness
 
 from charm import Operator
@@ -86,7 +86,7 @@ def test_public_url(harness, url_prefix, url_result):
 @patch("charm.KubernetesServicePatch", lambda x, y: None)
 def test_skip_auth_url_config_has_value(harness):
     harness.set_leader(True)
-    harness.update_config({"public-url": f"10.64.140.43.nip.io"})
+    harness.update_config({"public-url": "10.64.140.43.nip.io"})
     harness.update_config({"skip-auth-urls": "/test/,/path1/"})
     harness.begin_with_initial_hooks()
 
@@ -100,7 +100,7 @@ def test_skip_auth_url_config_has_value(harness):
 @patch("charm.KubernetesServicePatch", lambda x, y: None)
 def test_skip_auth_url_config_is_empty(harness):
     harness.set_leader(True)
-    harness.update_config({"public-url": f"10.64.140.43.nip.io"})
+    harness.update_config({"public-url": "10.64.140.43.nip.io"})
     harness.begin_with_initial_hooks()
 
     plan = harness.get_container_pebble_plan("oidc-authservice")
@@ -111,7 +111,7 @@ def test_skip_auth_url_config_is_empty(harness):
 @patch("charm.KubernetesServicePatch", lambda x, y: None)
 def test_ca_bundle_config(harness):
     harness.set_leader(True)
-    harness.update_config({"public-url": f"10.64.140.43.nip.io"})
+    harness.update_config({"public-url": "10.64.140.43.nip.io"})
     harness.update_config({"ca-bundle": "aaa"})
     harness.begin_with_initial_hooks()
 
@@ -125,7 +125,7 @@ def test_ca_bundle_config(harness):
 @patch("charm.KubernetesServicePatch", lambda x, y: None)
 def test_session_store(harness):
     harness.set_leader(True)
-    harness.update_config({"public-url": f"10.64.140.43.nip.io"})
+    harness.update_config({"public-url": "10.64.140.43.nip.io"})
     harness.begin_with_initial_hooks()
 
     plan = harness.get_container_pebble_plan("oidc-authservice")
