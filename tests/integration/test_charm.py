@@ -44,22 +44,12 @@ async def test_relations(ops_test: OpsTest):
     await ops_test.model.add_relation(f"{ISTIO_PILOT}:ingress", f"{APP_NAME}:ingress")
     await ops_test.model.add_relation(f"{ISTIO_PILOT}:ingress-auth", f"{APP_NAME}:ingress-auth")
 
-    await ops_test.model.wait_for_idle(
-        [APP_NAME, ISTIO_PILOT, DEX_AUTH],
-        status="active",
-        raise_on_blocked=True,
-        raise_on_error=True,
-        timeout=600,
-    )
-
-
-async def test_update_public_url(ops_test: OpsTest):
     public_url = "test-url"
     await ops_test.model.applications[DEX_AUTH].set_config({"public-url": public_url})
     await ops_test.model.applications[APP_NAME].set_config({"public-url": public_url})
 
     await ops_test.model.wait_for_idle(
-        [APP_NAME, DEX_AUTH],
+        [APP_NAME, ISTIO_PILOT, DEX_AUTH],
         status="active",
         raise_on_blocked=True,
         raise_on_error=True,
