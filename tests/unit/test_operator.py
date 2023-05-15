@@ -7,12 +7,12 @@ import yaml
 from ops.model import ActiveStatus, WaitingStatus
 from ops.testing import Harness
 
-from charm import Operator
+from charm import OIDCGatekeeperOperator
 
 
 @pytest.fixture
 def harness():
-    return Harness(Operator)
+    return Harness(OIDCGatekeeperOperator)
 
 
 @patch("charm.KubernetesServicePatch", lambda x, y: None)

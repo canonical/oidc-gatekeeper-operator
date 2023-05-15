@@ -17,7 +17,8 @@ from ops.pebble import Layer
 from serialized_data_interface import NoCompatibleVersions, NoVersionsListed, get_interfaces
 
 
-class Operator(CharmBase):
+class OIDCGatekeeperOperator(CharmBase):
+    """Charm OIDC Gatekeeper Operator."""
     def __init__(self, *args):
         super().__init__(*args)
 
@@ -118,11 +119,13 @@ class Operator(CharmBase):
         return Layer(pebble_layer)
 
     def _check_leader(self):
+        """Check if the unit is a leader."""
         if not self.unit.is_leader():
             self.logger.info("Not a leader, skipping")
             raise ErrorWithStatus("Waiting for leadership", WaitingStatus)
 
     def _get_interfaces(self):
+        """Get all SDI interfaces."""
         try:
             interfaces = get_interfaces(self)
         except NoVersionsListed as err:
@@ -132,10 +135,12 @@ class Operator(CharmBase):
         return interfaces
 
     def _check_public_url(self):
+        """Check if `public-url` config is set."""
         if not self.model.config.get("public-url"):
             raise ErrorWithStatus("public-url config required", BlockedStatus)
 
     def _configure_mesh(self, interfaces):
+        """Update ingress and ingress-auth relations with mesh info."""
         if interfaces["ingress"]:
             interfaces["ingress"].send_data(
                 {
@@ -159,6 +164,7 @@ class Operator(CharmBase):
             )
 
     def _send_info(self, interfaces, secret_key):
+        """Send info to oidc-client relation."""
         config = self.model.config
 
         if not config.get("public-url"):
@@ -175,6 +181,7 @@ class Operator(CharmBase):
             )
 
     def _check_secret(self, event=None):
+        """Check if secret is present in relation data, if not generate one."""
         for rel in self.model.relations["client-secret"]:
             if "client-secret" not in rel.data[self.model.app]:
                 rel.data[self.model.app]["client-secret"] = _gen_pass()
@@ -184,8 +191,9 @@ class Operator(CharmBase):
 
 
 def _gen_pass() -> str:
+    """Generate a random password."""
     return "".join(choices(ascii_uppercase + digits, k=30))
 
 
 if __name__ == "__main__":
-    main(Operator)
+    main(OIDCGatekeeperOperator)

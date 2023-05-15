@@ -8,6 +8,10 @@ description: |
 
   https://journal.arrikto.com/kubeflow-authentication-with-istio-dex-5eafdfac4782
 
+website: https://charmhub.io/oidc-gatekeeper
+source: https://github.com/canonical/oidc-gatekeeper-operator
+issues: https://github.com/canonical/oidc-gatekeeper-operator/issues
+
 containers:
   oidc-authservice:
     resource: oci-image
