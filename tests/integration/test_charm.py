@@ -71,7 +71,6 @@ class TestOIDCOperator:
 
     @pytest.mark.abort_on_fail
     async def test_upgrade(self, ops_test: OpsTest):
-        print(pytest.charm_under_test)
         await ops_test.model.remove_application(APP_NAME, block_until_done=True)
 
         await ops_test.model.deploy(
@@ -82,6 +81,14 @@ class TestOIDCOperator:
             f"{ISTIO_PILOT}:ingress-auth", f"{APP_NAME}:ingress-auth"
         )
         await ops_test.model.add_relation(f"{APP_NAME}:oidc-client", f"{DEX_AUTH}:oidc-client")
+        await ops_test.model.applications[APP_NAME].set_config({"public-url": PUBLIC_URL})
+        await ops_test.model.wait_for_idle(
+            [APP_NAME, ISTIO_PILOT, DEX_AUTH],
+            status="active",
+            raise_on_blocked=False,
+            raise_on_error=True,
+            timeout=600,
+        )
 
         cmd = (
             f"juju refresh {APP_NAME} "
