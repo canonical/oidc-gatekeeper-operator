@@ -1,6 +1,6 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
-
+import shlex
 from pathlib import Path
 
 import pytest
@@ -71,6 +71,7 @@ class TestOIDCOperator:
 
     @pytest.mark.abort_on_fail
     async def test_upgrade(self, ops_test: OpsTest):
+        print(pytest.charm_under_test)
         await ops_test.model.remove_application(APP_NAME, block_until_done=True)
 
         await ops_test.model.deploy(
@@ -82,10 +83,11 @@ class TestOIDCOperator:
         )
         await ops_test.model.add_relation(f"{APP_NAME}:oidc-client", f"{DEX_AUTH}:oidc-client")
 
-        await ops_test.run(
-            f"juju refresh {APP_NAME} --path "
-            f"{pytest.charm_under_test} --resource oci-image={image_path}"
+        cmd = (
+            f"juju refresh {APP_NAME} "
+            f'--path "{pytest.charm_under_test}" --resource oci-image="{image_path}"'
         )
+        await ops_test.run(*shlex.split(cmd))
 
         await ops_test.model.wait_for_idle(
             [APP_NAME, ISTIO_PILOT, DEX_AUTH],
