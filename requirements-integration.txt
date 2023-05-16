@@ -199,9 +199,12 @@ pytest==7.2.0
     # via
     #   pytest-asyncio
     #   pytest-operator
+    #   pytest-timeout
 pytest-asyncio==0.20.3
     # via pytest-operator
 pytest-operator==0.22.0
+    # via -r ./requirements-integration.in
+pytest-timeout==2.1.0
     # via -r ./requirements-integration.in
 python-dateutil==2.8.2
     # via kubernetes

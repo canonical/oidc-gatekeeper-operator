@@ -70,6 +70,7 @@ class TestOIDCOperator:
         )
 
     @pytest.mark.abort_on_fail
+    @pytest.mark.timeout(1200)
     async def test_upgrade(self, ops_test: OpsTest):
         await ops_test.model.remove_application(APP_NAME, block_until_done=True)
 
