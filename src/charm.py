@@ -3,6 +3,7 @@
 # See LICENSE file for licensing details.
 
 import logging
+import re
 from random import choices
 from string import ascii_uppercase, digits
 
@@ -38,6 +39,12 @@ class OIDCGatekeeperOperator(CharmBase):
         self.public_url = self.model.config["public-url"]
         if not self.public_url.startswith(("http://", "https://")):
             self.public_url = f"http://{self.public_url}"
+
+        # If public_url is a kubernetes-internal URL, it points directly to dex.  Otherwise, we
+        # need to route to /dex
+        kubernetes_internal_url_pattern = r".+\.svc\.cluster\.local\:\d+"
+        if not re.match(kubernetes_internal_url_pattern, self.public_url):
+            self.public_url += "/dex"
 
         for event in [
             self.on.start,
@@ -75,10 +82,12 @@ class OIDCGatekeeperOperator(CharmBase):
         dex_skip_urls = "/dex/" if not skip_urls else "/dex/," + skip_urls
 
         ret_env_vars = {
+            "AFTER_LOGIN_URL": "/",
             "CLIENT_ID": self.model.config["client-id"],
             "CLIENT_SECRET": secret_key,
             "DISABLE_USERINFO": True,
-            "OIDC_PROVIDER": f"{self.public_url}/dex",
+            "OIDC_AUTH_URL": "/dex/auth",
+            "OIDC_PROVIDER": self.public_url,
             "OIDC_SCOPES": self.model.config["oidc-scopes"],
             "SERVER_PORT": self._http_port,
             "USERID_HEADER": "kubeflow-userid",
@@ -88,7 +97,6 @@ class OIDCGatekeeperOperator(CharmBase):
             "OIDC_STATE_STORE_PATH": "oidc_state.db",
             "SKIP_AUTH_URLS": dex_skip_urls,
             "AUTHSERVICE_URL_PREFIX": "/authservice/",
-            "AFTER_LOGOUT_URL": self.model.config["public-url"],
         }
 
         if self.model.config["ca-bundle"]:
