@@ -19,6 +19,7 @@ from serialized_data_interface import NoCompatibleVersions, NoVersionsListed, ge
 
 class OIDCGatekeeperOperator(CharmBase):
     """Charm OIDC Gatekeeper Operator."""
+
     _http_port = 8080
 
     def __init__(self, *args):
