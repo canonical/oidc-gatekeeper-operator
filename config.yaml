@@ -2,10 +2,6 @@
 # See LICENSE file for licensing details.
 
 options:
-  port:
-    type: int
-    default: 8080
-    description: Listening port
   client-id:
     type: string
     default: 'authservice-oidc'
