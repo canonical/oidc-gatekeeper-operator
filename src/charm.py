@@ -40,10 +40,8 @@ class OIDCGatekeeperOperator(CharmBase):
         if not self.public_url.startswith(("http://", "https://")):
             self.public_url = f"http://{self.public_url}"
 
-        # If public_url is a kubernetes-internal URL, it points directly to dex.  Otherwise, we
-        # need to route to /dex
-        kubernetes_internal_url_pattern = r".+\.svc\.cluster\.local\:\d+"
-        if not re.match(kubernetes_internal_url_pattern, self.public_url):
+        self.public_url = self.public_url.rstrip("/")
+        if not self.public_url.endswith("/dex"):
             self.public_url += "/dex"
 
         for event in [
