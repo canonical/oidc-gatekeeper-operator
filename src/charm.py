@@ -20,6 +20,8 @@ from serialized_data_interface import NoCompatibleVersions, NoVersionsListed, ge
 class OIDCGatekeeperOperator(CharmBase):
     """Charm OIDC Gatekeeper Operator."""
 
+    _http_port = 8080
+
     def __init__(self, *args):
         super().__init__(*args)
 
@@ -27,12 +29,11 @@ class OIDCGatekeeperOperator(CharmBase):
         self._container_name = "oidc-authservice"
         self._container = self.unit.get_container(self._container_name)
         self.pebble_service_name = "oidc-authservice"
-        self._http_port = self.model.config["port"]
 
-        http_port = ServicePort(int(self._http_port), name="http-port")
+        http_service_port = ServicePort(self._http_port, name="http-port")
         self.service_patcher = KubernetesServicePatch(
             self,
-            [http_port],
+            [http_service_port],
         )
 
         self.public_url = self.model.config["public-url"]
@@ -148,14 +149,14 @@ class OIDCGatekeeperOperator(CharmBase):
                     "prefix": "/authservice",
                     "rewrite": "/",
                     "service": self.model.app.name,
-                    "port": self.model.config["port"],
+                    "port": self._http_port,
                 }
             )
         if interfaces["ingress-auth"]:
             interfaces["ingress-auth"].send_data(
                 {
                     "service": self.model.app.name,
-                    "port": self.model.config["port"],
+                    "port": self._http_port,
                     "allowed-request-headers": [
                         "cookie",
                         "X-Auth-Token",
