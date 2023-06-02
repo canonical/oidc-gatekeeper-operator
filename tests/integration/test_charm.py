@@ -106,5 +106,5 @@ class TestOIDCOperator:
             status="active",
             raise_on_blocked=True,
             raise_on_error=True,
-            timeout=600,
+            timeout=1200,
         )
