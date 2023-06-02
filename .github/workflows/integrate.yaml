@@ -57,7 +57,7 @@ jobs:
           juju-channel: 2.9/candidate
 
       - name: Test
-        run: sg microk8s -c "tox -vve integration -- --model testing"
+        run: sg microk8s -c "tox -vve integration -- --model ci-test"
 
         # On failure, capture debugging resources
       - name: Get all
