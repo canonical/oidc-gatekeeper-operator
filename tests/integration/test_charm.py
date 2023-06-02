@@ -73,6 +73,7 @@ class TestOIDCOperator:
     @pytest.mark.timeout(1200)
     async def test_upgrade(self, ops_test: OpsTest):
         await ops_test.model.remove_application(APP_NAME, block_until_done=True)
+        print("Built OIDC App removed, deploy from stable channel")
 
         await ops_test.model.deploy(
             APP_NAME, channel="ckf-1.7/stable", trust=True, config=OIDC_CONFIG
@@ -83,6 +84,8 @@ class TestOIDCOperator:
         )
         await ops_test.model.add_relation(f"{APP_NAME}:oidc-client", f"{DEX_AUTH}:oidc-client")
         await ops_test.model.applications[APP_NAME].set_config({"public-url": PUBLIC_URL})
+
+        print("Stable charm is deployed, add relations")
         await ops_test.model.wait_for_idle(
             [APP_NAME, ISTIO_PILOT, DEX_AUTH],
             status="active",
@@ -91,6 +94,7 @@ class TestOIDCOperator:
             timeout=600,
         )
 
+        print("Try to refresh stable charm to locally built")
         cmd = (
             f"juju refresh {APP_NAME} "
             f'--path "{pytest.charm_under_test}" --resource oci-image="{image_path}"'
