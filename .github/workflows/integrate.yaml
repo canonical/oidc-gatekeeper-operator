@@ -57,7 +57,7 @@ jobs:
           juju-channel: 2.9/candidate
 
       - name: Test
-        run: sg microk8s -c "tox -vve integration -- --model ci-test"
+        run: sg microk8s -c "tox -vve integration -- --model testing"
 
         # On failure, capture debugging resources
       - name: Get all
@@ -77,25 +77,25 @@ jobs:
         if: failure()
 
       - name: Get oidc-gatekeeper workload logs
-        run: kubectl logs --tail 100 -nci-test -ljuju-app=oidc-gatekeeper
+        run: kubectl logs --tail 100 -ntesting -ljuju-app=oidc-gatekeeper
         if: failure()
 
       - name: Get oidc-gatekeeper operator logs
-        run: kubectl logs --tail 100 -nci-test -ljuju-operator=oidc-gatekeeper
+        run: kubectl logs --tail 100 -ntesting -ljuju-operator=oidc-gatekeeper
         if: failure()
 
       - name: Get dex-auth workload logs
-        run: kubectl logs --tail 100 -nci-test -ljuju-app=dex-auth
+        run: kubectl logs --tail 100 -ntesting -ljuju-app=dex-auth
         if: failure()
 
       - name: Get dex-auth operator logs
-        run: kubectl logs --tail 100 -nci-test -ljuju-operator=dex-auth
+        run: kubectl logs --tail 100 -ntesting -ljuju-operator=dex-auth
         if: failure()
 
       - name: Get istio-pilot workload logs
-        run: kubectl logs --tail 100 -nci-test -ljuju-app=istio-pilot
+        run: kubectl logs --tail 100 -ntesting -ljuju-app=istio-pilot
         if: failure()
 
       - name: Get istio-pilot operator logs
-        run: kubectl logs --tail 100 -nci-test -ljuju-operator=istio-pilot
+        run: kubectl logs --tail 100 -ntesting -ljuju-operator=istio-pilot
         if: failure()
