@@ -77,7 +77,7 @@ jobs:
         if: failure()
 
       - name: Get oidc-gatekeeper workload logs
-        run: kubectl logs --tail 100 -ntesting -l"operator.juju.is/name==oidc-gatekeeper"
+        run: kubectl logs --tail 100 -ntesting -l"operator.juju.is/name=oidc-gatekeeper"
         if: failure()
 
       - name: Get dex-auth workload logs
