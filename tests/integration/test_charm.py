@@ -72,6 +72,12 @@ class TestOIDCOperator:
     @pytest.mark.abort_on_fail
     @pytest.mark.timeout(1200)
     async def test_upgrade(self, ops_test: OpsTest):
+        """Test that charm can be upgraded from podspec to sidecar.
+
+        For this test we use 1.7/stable channel as the source for podspec charm.
+
+        Note: juju has a bug due to which you have to first scale podspec charm to 0,
+        then refresh, then scale up newly deployed app."""
         await ops_test.model.remove_application(APP_NAME, block_until_done=True)
         print("Built OIDC App removed, deploy from stable channel")
 
@@ -93,6 +99,8 @@ class TestOIDCOperator:
             raise_on_error=True,
             timeout=600,
         )
+        cmd = f"juju scale-application {APP_NAME} 0"
+        await ops_test.run(*shlex.split(cmd))
 
         print("Try to refresh stable charm to locally built")
         cmd = (
@@ -102,7 +110,16 @@ class TestOIDCOperator:
         await ops_test.run(*shlex.split(cmd))
 
         await ops_test.model.wait_for_idle(
-            [APP_NAME, ISTIO_PILOT, DEX_AUTH],
+            status="active",
+            raise_on_blocked=True,
+            raise_on_error=True,
+            timeout=1200,
+        )
+
+        cmd = f"juju scale-application {APP_NAME} 1"
+        await ops_test.run(*shlex.split(cmd))
+
+        await ops_test.model.wait_for_idle(
             status="active",
             raise_on_blocked=True,
             raise_on_error=True,
