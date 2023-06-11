@@ -109,13 +109,6 @@ class TestOIDCOperator:
         )
         await ops_test.run(*shlex.split(cmd))
 
-        await ops_test.model.wait_for_idle(
-            status="active",
-            raise_on_blocked=True,
-            raise_on_error=True,
-            timeout=1200,
-        )
-
         cmd = f"juju scale-application {APP_NAME} 1"
         await ops_test.run(*shlex.split(cmd))
 
