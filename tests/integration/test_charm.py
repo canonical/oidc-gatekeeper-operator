@@ -77,7 +77,9 @@ class TestOIDCOperator:
         For this test we use 1.7/stable channel as the source for podspec charm.
 
         Note: juju has a bug due to which you have to first scale podspec charm to 0,
-        then refresh, then scale up newly deployed app."""
+        then refresh, then scale up newly deployed app.
+        See https://github.com/juju/juju/pull/15701 for more info.
+        """
         await ops_test.model.remove_application(APP_NAME, block_until_done=True)
         print("Built OIDC App removed, deploy from stable channel")
 
@@ -99,8 +101,8 @@ class TestOIDCOperator:
             raise_on_error=True,
             timeout=600,
         )
-        cmd = f"juju scale-application {APP_NAME} 0"
-        await ops_test.run(*shlex.split(cmd))
+        print(f"Scale {APP_NAME} to 0 units")
+        await ops_test.model.applications[APP_NAME].scale(scale=0)
 
         print("Try to refresh stable charm to locally built")
         cmd = (
@@ -109,8 +111,8 @@ class TestOIDCOperator:
         )
         await ops_test.run(*shlex.split(cmd))
 
-        cmd = f"juju scale-application {APP_NAME} 1"
-        await ops_test.run(*shlex.split(cmd))
+        print(f"Scale {APP_NAME} to 1 unit")
+        await ops_test.model.applications[APP_NAME].scale(scale=1)
 
         await ops_test.model.wait_for_idle(
             status="active",
