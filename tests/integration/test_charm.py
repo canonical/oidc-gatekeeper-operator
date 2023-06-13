@@ -105,11 +105,14 @@ class TestOIDCOperator:
         await ops_test.model.applications[APP_NAME].scale(scale=0)
 
         print("Try to refresh stable charm to locally built")
-        cmd = (
-            f"juju refresh {APP_NAME} "
-            f'--path "{pytest.charm_under_test}" --resource oci-image="{image_path}"'
-        )
-        await ops_test.run(*shlex.split(cmd))
+        # temporary measure while we don't have a solution for this:
+        # * https://github.com/juju/python-libjuju/issues/881
+        # Currently `application.local_refresh` doesn't work as expected.
+        await ops_test.juju([
+            "refresh", APP_NAME,
+            "--path", pytest.charm_under_test,
+            "--resource", f"oci-image='{image_path}'"
+        ])
 
         print(f"Scale {APP_NAME} to 1 unit")
         await ops_test.model.applications[APP_NAME].scale(scale=1)
