@@ -69,6 +69,11 @@ class TestOIDCOperator:
         )
 
     @pytest.mark.abort_on_fail
+    async def test_remove_application(self, ops_test: OpsTest):
+        """Test that the application can be removed successfully."""
+        await ops_test.model.remove_application(APP_NAME, block_until_done=True)
+
+    @pytest.mark.abort_on_fail
     @pytest.mark.timeout(1200)
     async def test_upgrade(self, ops_test: OpsTest):
         """Test that charm can be upgraded from podspec to sidecar.
@@ -79,9 +84,7 @@ class TestOIDCOperator:
         then refresh, then scale up newly deployed app.
         See https://github.com/juju/juju/pull/15701 for more info.
         """
-        await ops_test.model.remove_application(APP_NAME, block_until_done=True)
-        print("Built OIDC App removed, deploy from stable channel")
-
+        print(f"Deploy {APP_NAME} from stable channel")
         await ops_test.model.deploy(
             APP_NAME, channel="ckf-1.7/stable", trust=True, config=OIDC_CONFIG
         )
