@@ -54,7 +54,7 @@ jobs:
         with:
           provider: microk8s
           channel: 1.24/stable
-          charmcraft-channel: latest/candidate
+          juju-channel: 2.9/stable
 
       - name: Test
         run: sg microk8s -c "tox -vve integration -- --model testing"
@@ -77,25 +77,13 @@ jobs:
         if: failure()
 
       - name: Get oidc-gatekeeper workload logs
-        run: kubectl logs --tail 100 -nci-test -ljuju-app=oidc-gatekeeper
-        if: failure()
-
-      - name: Get oidc-gatekeeper operator logs
-        run: kubectl logs --tail 100 -nci-test -ljuju-operator=oidc-gatekeeper
+        run: kubectl logs --tail 100 -n testing -l"operator.juju.is/name=oidc-gatekeeper"
         if: failure()
 
       - name: Get dex-auth workload logs
-        run: kubectl logs --tail 100 -nci-test -ljuju-app=dex-auth
-        if: failure()
-
-      - name: Get dex-auth operator logs
-        run: kubectl logs --tail 100 -nci-test -ljuju-operator=dex-auth
+        run: kubectl logs --tail 100 -n testing -l"operator.juju.is/name=dex-auth"
         if: failure()
 
       - name: Get istio-pilot workload logs
-        run: kubectl logs --tail 100 -nci-test -ljuju-app=istio-pilot
-        if: failure()
-
-      - name: Get istio-pilot operator logs
-        run: kubectl logs --tail 100 -nci-test -ljuju-operator=istio-pilot
+        run: kubectl logs --tail 100 -n testing -l"operator.juju.is/name=istio-pilot"
         if: failure()

@@ -68,39 +68,65 @@ class TestOIDCOperator:
             timeout=600,
         )
 
-    # uncomment when juju 2.9.43 is released
-    # @pytest.mark.abort_on_fail
-    # @pytest.mark.timeout(1200)
-    # async def test_upgrade(self, ops_test: OpsTest):
-    #     await ops_test.model.remove_application(APP_NAME, block_until_done=True)
-    #
-    #     await ops_test.model.deploy(
-    #         APP_NAME, channel="ckf-1.7/stable", trust=True, config=OIDC_CONFIG
-    #     )
-    #     await ops_test.model.add_relation(f"{ISTIO_PILOT}:ingress", f"{APP_NAME}:ingress")
-    #     await ops_test.model.add_relation(
-    #         f"{ISTIO_PILOT}:ingress-auth", f"{APP_NAME}:ingress-auth"
-    #     )
-    #     await ops_test.model.add_relation(f"{APP_NAME}:oidc-client", f"{DEX_AUTH}:oidc-client")
-    #     await ops_test.model.applications[APP_NAME].set_config({"public-url": PUBLIC_URL})
-    #     await ops_test.model.wait_for_idle(
-    #         [APP_NAME, ISTIO_PILOT, DEX_AUTH],
-    #         status="active",
-    #         raise_on_blocked=False,
-    #         raise_on_error=True,
-    #         timeout=600,
-    #     )
-    #
-    #     cmd = (
-    #         f"juju refresh {APP_NAME} "
-    #         f'--path "{pytest.charm_under_test}" --resource oci-image="{image_path}"'
-    #     )
-    #     await ops_test.run(*shlex.split(cmd))
-    #
-    #     await ops_test.model.wait_for_idle(
-    #         [APP_NAME, ISTIO_PILOT, DEX_AUTH],
-    #         status="active",
-    #         raise_on_blocked=True,
-    #         raise_on_error=True,
-    #         timeout=600,
-    #     )
+    @pytest.mark.abort_on_fail
+    async def test_remove_application(self, ops_test: OpsTest):
+        """Test that the application can be removed successfully."""
+        await ops_test.model.remove_application(APP_NAME, block_until_done=True)
+
+    @pytest.mark.abort_on_fail
+    @pytest.mark.timeout(1200)
+    async def test_upgrade(self, ops_test: OpsTest):
+        """Test that charm can be upgraded from podspec to sidecar.
+
+        For this test we use 1.7/stable channel as the source for podspec charm.
+
+        Note: juju has a bug due to which you have to first scale podspec charm to 0,
+        then refresh, then scale up newly deployed app.
+        See https://github.com/juju/juju/pull/15701 for more info.
+        """
+        print(f"Deploy {APP_NAME} from stable channel")
+        await ops_test.model.deploy(
+            APP_NAME, channel="ckf-1.7/stable", trust=True, config=OIDC_CONFIG
+        )
+        await ops_test.model.add_relation(f"{ISTIO_PILOT}:ingress", f"{APP_NAME}:ingress")
+        await ops_test.model.add_relation(
+            f"{ISTIO_PILOT}:ingress-auth", f"{APP_NAME}:ingress-auth"
+        )
+        await ops_test.model.add_relation(f"{APP_NAME}:oidc-client", f"{DEX_AUTH}:oidc-client")
+        await ops_test.model.applications[APP_NAME].set_config({"public-url": PUBLIC_URL})
+
+        print("Stable charm is deployed, add relations")
+        await ops_test.model.wait_for_idle(
+            [APP_NAME, ISTIO_PILOT, DEX_AUTH],
+            status="active",
+            raise_on_blocked=False,
+            raise_on_error=True,
+            timeout=600,
+        )
+        print(f"Scale {APP_NAME} to 0 units")
+        await ops_test.model.applications[APP_NAME].scale(scale=0)
+
+        print("Try to refresh stable charm to locally built")
+        # temporary measure while we don't have a solution for this:
+        # * https://github.com/juju/python-libjuju/issues/881
+        # Currently `application.local_refresh` doesn't work as expected.
+        await ops_test.juju(
+            [
+                "refresh",
+                APP_NAME,
+                "--path",
+                pytest.charm_under_test,
+                "--resource",
+                f"oci-image='{image_path}'",
+            ]
+        )
+
+        print(f"Scale {APP_NAME} to 1 unit")
+        await ops_test.model.applications[APP_NAME].scale(scale=1)
+
+        await ops_test.model.wait_for_idle(
+            status="active",
+            raise_on_blocked=True,
+            raise_on_error=True,
+            timeout=1200,
+        )
