@@ -49,7 +49,7 @@ class TestOIDCOperator:
 
     @pytest.mark.abort_on_fail
     async def test_relations(self, ops_test: OpsTest):
-        await ops_test.model.deploy(ISTIO_PILOT, channel="1.5/stable", trust=True)
+        await ops_test.model.deploy(ISTIO_PILOT, channel="1.16/stable", trust=True)
         await ops_test.model.deploy(DEX_AUTH, channel="2.31/stable", trust=True)
         await ops_test.model.add_relation(ISTIO_PILOT, DEX_AUTH)
         await ops_test.model.add_relation(f"{ISTIO_PILOT}:ingress", f"{APP_NAME}:ingress")
@@ -60,10 +60,12 @@ class TestOIDCOperator:
 
         await ops_test.model.applications[DEX_AUTH].set_config({"public-url": PUBLIC_URL})
 
+        # Not raising on blocked will allow istio-pilot to be deployed
+        # without istio-gateway and provide oidc with the data it needs.
         await ops_test.model.wait_for_idle(
             [APP_NAME, ISTIO_PILOT, DEX_AUTH],
             status="active",
-            raise_on_blocked=True,
+            raise_on_blocked=False,
             raise_on_error=True,
             timeout=600,
         )
