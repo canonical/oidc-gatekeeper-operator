@@ -54,6 +54,7 @@ async def test_relations(ops_test: OpsTest):
         timeout=600,
     )
 
+
 async def test_update_public_url(ops_test: OpsTest):
     public_url = "test-url"
     await ops_test.model.applications[DEX_AUTH].set_config({"public-url": public_url})
