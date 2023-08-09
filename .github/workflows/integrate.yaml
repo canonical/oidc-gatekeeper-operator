@@ -60,24 +60,6 @@ jobs:
       - name: Test
         run: sg microk8s -c "tox -vve integration -- --model testing"
 
-      - name: Save relevant debug artifacts
-        if: always()
-        run: |
-          mkdir ~/operators-debug-logs
-          juju debug-log --replay | tee ~/operators-debug-logs/juju-debug-log.log
-          juju status | tee ~/operators-debug-logs/juju-status.log
-          bash -c "cp ~/.local/state/charmcraft/log/* ~/operators-debug-logs/"
-          sg microk8s -c "microk8s.kubectl describe deployments -A | tee ~/operators-debug-logs/deployments.log"
-          sg microk8s -c "microk8s.kubectl describe pods -A | tee ~/operators-debug-logs/pods.log"
-          sg microk8s -c "microk8s.kubectl describe workloads -A | tee ~/operators-debug-logs/workloads.log"
-
-      - name: Upload debug artifacts
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: operators-debug-logs
-          path: ~/operators-debug-logs
-
         # On failure, capture debugging resources
       - name: Get all
         run: kubectl get all -A
