@@ -24,6 +24,19 @@ def test_missing_image(harness):
     harness.begin_with_initial_hooks()
     assert harness.charm.model.unit.status == BlockedStatus("Missing resource: oci-image")
 
+def test_missing_public_url(harness):
+    harness.set_leader(True)
+    harness.add_oci_resource(
+        "oci-image",
+        {
+            "registrypath": "ci-test",
+            "username": "",
+            "password": "",
+        },
+    )
+    harness.begin_with_initial_hooks()
+    assert harness.charm.model.unit.status == BlockedStatus("public-url config required")
+
 
 def test_no_relation(harness):
     harness.set_leader(True)
@@ -37,6 +50,7 @@ def test_no_relation(harness):
     )
     harness.begin_with_initial_hooks()
 
+    harness.update_config({"public-url": "10.64.140.43.nip.io"})
     assert harness.charm.model.unit.status == ActiveStatus()
 
 
@@ -50,6 +64,7 @@ def test_with_relation(harness):
             "password": "",
         },
     )
+    harness.update_config({"public-url": "10.64.140.43.nip.io"})
     rel_id = harness.add_relation("ingress", "app")
 
     harness.add_relation_unit(rel_id, "app/0")
@@ -116,7 +131,7 @@ def test_skip_auth_url_config_has_value(harness):
             "password": "",
         },
     )
-    harness.update_config({"skip-auth-urls": "/test/,/path1/"})
+    harness.update_config({"public-url": "https://10.64.140.43.nip.io", "skip-auth-urls": "/test/,/path1/"})
     harness.begin_with_initial_hooks()
 
     pod_spec, _ = harness.get_pod_spec()
@@ -134,6 +149,7 @@ def test_skip_auth_url_config_is_empty(harness):
             "password": "",
         },
     )
+    harness.update_config({"public-url": "https://10.64.140.43.nip.io"})
     harness.begin_with_initial_hooks()
 
     pod_spec, _ = harness.get_pod_spec()
@@ -151,7 +167,7 @@ def test_ca_bundle_config(harness):
             "password": "",
         },
     )
-    harness.update_config({"ca-bundle": "aaa"})
+    harness.update_config({"public-url": "https://10.64.140.43.nip.io", "ca-bundle": "aaa"})
     harness.begin_with_initial_hooks()
 
     pod_spec, _ = harness.get_pod_spec()
@@ -169,6 +185,7 @@ def test_session_store_path(harness):
             "password": "",
         },
     )
+    harness.update_config({"public-url": "https://10.64.140.43.nip.io"})
     harness.begin_with_initial_hooks()
     pod_spec, _ = harness.get_pod_spec()
     assert pod_spec["containers"][0]["envConfig"]["SESSION_STORE_PATH"] == "bolt.db"
@@ -184,6 +201,7 @@ def test_oidc_state_store_path(harness):
             "password": "",
         },
     )
+    harness.update_config({"public-url": "https://10.64.140.43.nip.io"})
     harness.begin_with_initial_hooks()
     pod_spec, _ = harness.get_pod_spec()
     assert pod_spec["containers"][0]["envConfig"]["OIDC_STATE_STORE_PATH"] == "oidc_state.db"
