@@ -82,6 +82,7 @@ class OIDCGatekeeperOperator(CharmBase):
             "OIDC_PROVIDER": f"{self.public_url}/dex",
             "OIDC_SCOPES": self.model.config["oidc-scopes"],
             "SERVER_PORT": self._http_port,
+            "USERID_CLAIM": self.model.config["userid-claim"],
             "USERID_HEADER": "kubeflow-userid",
             "USERID_PREFIX": "",
             "SESSION_STORE_PATH": "bolt.db",
