@@ -24,6 +24,7 @@ def test_missing_image(harness):
     harness.begin_with_initial_hooks()
     assert harness.charm.model.unit.status == BlockedStatus("Missing resource: oci-image")
 
+
 def test_missing_public_url(harness):
     harness.set_leader(True)
     harness.add_oci_resource(
@@ -131,7 +132,9 @@ def test_skip_auth_url_config_has_value(harness):
             "password": "",
         },
     )
-    harness.update_config({"public-url": "https://10.64.140.43.nip.io", "skip-auth-urls": "/test/,/path1/"})
+    harness.update_config(
+        {"public-url": "https://10.64.140.43.nip.io", "skip-auth-urls": "/test/,/path1/"}
+    )
     harness.begin_with_initial_hooks()
 
     pod_spec, _ = harness.get_pod_spec()
