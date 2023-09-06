@@ -13,6 +13,7 @@ OIDC_CONFIG = {
     "client-name": "Ambassador Auth OIDC",
     "client-secret": "oidc-client-secret",
 }
+OIDC_URL = "https://10.64.140.43.nip.io"
 ISTIO_PILOT = "istio-pilot"
 DEX_AUTH = "dex-auth"
 
@@ -30,6 +31,13 @@ async def test_build_and_deploy(ops_test: OpsTest):
     await ops_test.model.deploy(
         charm_under_test, resources=resources, trust=True, config=OIDC_CONFIG
     )
+
+    await ops_test.model.wait_for_idle(
+        apps=[APP_NAME], status="blocked", raise_on_blocked=False, timeout=60 * 10
+    )
+    # Set config for public-url in order to unblock charm
+    await ops_test.model.applications[APP_NAME].set_config({"public-url": OIDC_URL})
+
     await ops_test.model.wait_for_idle(
         apps=[APP_NAME], status="active", raise_on_blocked=True, timeout=60 * 10
     )
