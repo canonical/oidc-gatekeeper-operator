@@ -11,7 +11,9 @@ from charm import Operator
 
 @pytest.fixture
 def harness():
-    return Harness(Operator)
+    harness = Harness(Operator)
+    harness.update_config({"public-url": "10.64.140.43.nip.io"})
+    return harness
 
 
 def test_not_leader(harness):
@@ -23,6 +25,21 @@ def test_missing_image(harness):
     harness.set_leader(True)
     harness.begin_with_initial_hooks()
     assert harness.charm.model.unit.status == BlockedStatus("Missing resource: oci-image")
+
+
+def test_missing_public_url(harness):
+    harness.set_leader(True)
+    harness.add_oci_resource(
+        "oci-image",
+        {
+            "registrypath": "ci-test",
+            "username": "",
+            "password": "",
+        },
+    )
+    harness.update_config({"public-url": ""})
+    harness.begin_with_initial_hooks()
+    assert harness.charm.model.unit.status == BlockedStatus("public-url config required")
 
 
 def test_no_relation(harness):
@@ -75,7 +92,6 @@ def test_public_url_prepend_http(harness):
             "password": "",
         },
     )
-    harness.update_config({"public-url": "10.64.140.43.nip.io"})
     harness.begin_with_initial_hooks()
 
     pod_spec, _ = harness.get_pod_spec()

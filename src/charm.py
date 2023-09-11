@@ -42,6 +42,8 @@ class Operator(CharmBase):
 
             image_details = self._check_image_details()
 
+            self._check_public_url()
+
         except CheckFailed as error:
             self.model.unit.status = error.status
             return
