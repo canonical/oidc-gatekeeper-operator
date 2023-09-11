@@ -31,9 +31,8 @@ async def test_build_and_deploy(ops_test: OpsTest):
     await ops_test.model.deploy(
         charm_under_test, resources=resources, trust=True, config=OIDC_CONFIG
     )
-
     await ops_test.model.wait_for_idle(
-        apps=[APP_NAME], status="active", raise_on_blocked=False, timeout=60 * 10
+        apps=[APP_NAME], status="active", raise_on_blocked=True, timeout=60 * 10
     )
     assert ops_test.model.applications[APP_NAME].units[0].workload_status == "active"
 
