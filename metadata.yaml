@@ -22,7 +22,7 @@ resources:
     type: oci-image
     description: 'Backing OCI image'
     auto-fetch: true
-    upstream-source: gcr.io/arrikto/kubeflow/oidc-authservice:e236439
+    upstream-source: docker.io/kubeflowmanifestswg/oidc-authservice:e236439
 peers:
   client-secret:
     interface: client-secret
