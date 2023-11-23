@@ -45,6 +45,7 @@ class OIDCGatekeeperOperator(CharmBase):
             self.on.leader_elected,
             self.on.upgrade_charm,
             self.on.config_changed,
+            self.on.oidc_authservice_pebble_ready,
             self.on["ingress"].relation_changed,
             self.on["ingress-auth"].relation_changed,
             self.on["oidc-client"].relation_changed,
