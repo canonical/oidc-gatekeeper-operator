@@ -1,6 +1,6 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 import yaml
@@ -136,3 +136,22 @@ def test_session_store(harness):
     assert (
         plan.services["oidc-authservice"].environment["OIDC_STATE_STORE_PATH"] == "oidc_state.db"
     )
+
+
+@patch("charm.KubernetesServicePatch", lambda x, y: None)
+@patch("charm.update_layer", MagicMock())
+def test_pebble_ready_hook_handled(harness: Harness):
+    """
+    Test if we handle oidc_authservice_pebble_ready hook. This test fails if we don't.
+    """
+    harness.set_leader(True)
+    harness.begin()
+    harness.charm._check_public_url = MagicMock()
+    harness.charm._get_interfaces = MagicMock()
+    harness.charm._check_secret = MagicMock()
+    harness.charm._send_info = MagicMock()
+    harness.charm._configure_mesh = MagicMock()
+
+    harness.charm.on.oidc_authservice_pebble_ready.emit(harness.charm)
+
+    assert isinstance(harness.charm.model.unit.status, ActiveStatus)
