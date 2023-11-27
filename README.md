@@ -1,5 +1,9 @@
 ## OIDC Gatekeeper Operator - a component of the Charmed Kubeflow distribution from Canonical
 
+[![CharmHub Badge](https://charmhub.io/oidc-gatekeeper/badge.svg)](https://charmhub.io/oidc-gatekeeper)
+[![PR tests](https://github.com/canonical/oidc-gatekeeper-operator/actions/workflows/on_pull_request.yaml/badge.svg)](https://github.com/canonical/oidc-gatekeeper-operator/actions/workflows/on_pull_request.yaml)
+[![Publish](https://github.com/canonical/oidc-gatekeeper-operator/actions/workflows/on_push.yaml/badge.svg)](https://github.com/canonical/oidc-gatekeeper-operator/actions/workflows/on_push.yaml)
+
 This repository hosts the Kubernetes Python Operator for OIDC Gatekeeper
 (see [CharmHub](https://charmhub.io/?q=oidc-gatekeeper)).
 
