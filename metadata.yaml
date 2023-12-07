@@ -14,7 +14,7 @@ resources:
     type: oci-image
     description: 'Backing OCI image'
     auto-fetch: true
-    upstream-source: gcr.io/arrikto/kubeflow/oidc-authservice:e236439
+    upstream-source: charmedkubeflow/oidc-authservice:ckf-1.7_9517371
 peers:
   client-secret:
     interface: client-secret
