@@ -70,3 +70,4 @@ Canonical welcomes contributions to Charmed Kubeflow. Please check out our [cont
 
 ### Security
 Security issues in Charmed Kubeflow can be reported through [LaunchPad](https://wiki.ubuntu.com/DebuggingSecurity#How%20to%20File). Please do not file GitHub issues about security issues.
+
