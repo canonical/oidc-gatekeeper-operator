@@ -117,6 +117,12 @@ class OIDCGatekeeperOperator(CharmBase):
                     "command": "/home/authservice/oidc-authservice",
                     "environment": self.service_environment,
                     "startup": "enabled",
+                    # working-dir is required to interchangeably support docker images and rocks.
+                    # Rocks always set their entrypoint working-dir to "/" because pebble is the
+                    # entrypoint, so we need to be explicit.  This was not needed for running
+                    # the upstream docker image because that image has a entrypoint working-dir
+                    # of "/home/authservice", which is used if working-dir is not set here.
+                    "working-dir": "/home/authservice",
                 }
             },
         }
