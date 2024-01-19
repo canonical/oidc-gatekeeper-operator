@@ -117,6 +117,9 @@ class OIDCGatekeeperOperator(CharmBase):
                     "command": "/home/authservice/oidc-authservice",
                     "environment": self.service_environment,
                     "startup": "enabled",
+                    # See https://github.com/canonical/oidc-gatekeeper-operator/pull/128
+                    # for context on why we need working-dir set here.
+                    "working-dir": "/home/authservice",
                 }
             },
         }
