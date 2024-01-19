@@ -55,12 +55,12 @@ class OIDCGatekeeperOperator(CharmBase):
 
     def main(self, event):
         try:
-            self._check_public_url()
             self._check_leader()
             interfaces = self._get_interfaces()
             secret_key = self._check_secret()
             self._send_info(interfaces, secret_key)
             self._configure_mesh(interfaces)
+            self._check_public_url()
             update_layer(self._container_name, self._container, self._oidc_layer, self.logger)
         except ErrorWithStatus as err:
             self.model.unit.status = err.status
