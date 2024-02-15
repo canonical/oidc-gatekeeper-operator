@@ -1,9 +1,15 @@
 aiohttp
+# TODO: unpin this after this chisme PR is released:
+# https://github.com/canonical/charmed-kubeflow-chisme/pull/88
+git+https://github.com/canonical/charmed-kubeflow-chisme.git@kf-5229-add-fire-update-status-utility
+# charmed-kubeflow-chisme
 jinja2
 # Pinning to <4.0 due to compatibility with the 3.1 controller version
 juju<4.0
+lightkube
 pytest
 pytest-operator
 pytest-timeout
 pyyaml
 requests
+tenacity
