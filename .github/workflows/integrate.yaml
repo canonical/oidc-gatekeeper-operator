@@ -53,6 +53,7 @@ jobs:
         uses: charmed-kubernetes/actions-operator@main
         with:
           provider: microk8s
+          microk8s-addons: "dns hostpath-storage rbac metallb:10.64.140.43-10.64.140.49"
           channel: 1.25-strict/stable
           juju-channel: 3.1/stable
           charmcraft-channel: latest/stable
