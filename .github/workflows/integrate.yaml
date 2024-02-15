@@ -65,6 +65,10 @@ jobs:
         run: kubectl get all -A
         if: failure()
 
+      - name: Save debug artifacts
+        uses: canonical/kubeflow-ci/actions/dump-charm-debug-artifacts@main
+        if: always()
+
       - name: Describe deployments
         run: kubectl describe deployments -A
         if: failure()
@@ -77,14 +81,38 @@ jobs:
         run: juju status
         if: failure()
 
+      - name: Dump juju debug-log
+        run: juju debug-log --replay --no-tail
+        if: failure()
+
       - name: Get oidc-gatekeeper workload logs
-        run: kubectl logs --tail 100 -n testing -l"operator.juju.is/name=oidc-gatekeeper"
+        run: kubectl logs -n testing oidc-gatekeeper-0 -c oidc-authservice
+        if: failure()
+
+      - name: Get oidc-gatekeeper charm logs
+        run: kubectl logs -n testing oidc-gatekeeper-0 -c charm
         if: failure()
 
       - name: Get dex-auth workload logs
-        run: kubectl logs --tail 100 -n testing -l"operator.juju.is/name=dex-auth"
+        run: kubectl logs -n testing dex-auth-0 -c dex
         if: failure()
 
-      - name: Get istio-pilot workload logs
-        run: kubectl logs --tail 100 -n testing -l"operator.juju.is/name=istio-pilot"
+      - name: Get dex-auth charm logs
+        run: kubectl logs -n testing dex-auth-0 -c charm
+        if: failure()
+
+      - name: Get istio-pilot charm logs
+        run: kubectl logs -n testing istio-pilot-0 -c charm
+        if: failure()
+
+      - name: Get istiod logs
+        run: kubectl logs -n testing -l'app=istiod' --tail=1000
+        if: failure()
+
+      - name: Get istio-gateway charm logs
+        run: kubectl logs -n testing istio-gateway-0 -c charm
+        if: failure()
+
+      - name: Get istio-gateway workload logs
+        run: kubectl logs -n testing -l'app=istio-ingressgateway' --tail=1000
         if: failure()
