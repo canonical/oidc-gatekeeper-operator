@@ -8,6 +8,7 @@ from string import ascii_uppercase, digits
 
 from charmed_kubeflow_chisme.exceptions import ErrorWithStatus
 from charmed_kubeflow_chisme.pebble import update_layer
+from charmed_kubeflow_chisme.status_handling import check_workload_health
 from charms.observability_libs.v1.kubernetes_service_patch import KubernetesServicePatch
 from lightkube.models.core_v1 import ServicePort
 from ops.charm import CharmBase
@@ -29,6 +30,7 @@ class OIDCGatekeeperOperator(CharmBase):
         self._container_name = "oidc-authservice"
         self._container = self.unit.get_container(self._container_name)
         self.pebble_service_name = "oidc-authservice"
+        self._health_check_name = "oidc-authservice-up"
 
         http_service_port = ServicePort(self._http_port, name="http-port")
         self.service_patcher = KubernetesServicePatch(
@@ -53,6 +55,8 @@ class OIDCGatekeeperOperator(CharmBase):
         ]:
             self.framework.observe(event, self.main)
 
+        self.framework.observe(self.on.update_status, self._on_update_status)
+
     def main(self, event):
         try:
             self._check_public_url()
@@ -62,6 +66,18 @@ class OIDCGatekeeperOperator(CharmBase):
             self._send_info(interfaces, secret_key)
             self._configure_mesh(interfaces)
             update_layer(self._container_name, self._container, self._oidc_layer, self.logger)
+        except ErrorWithStatus as err:
+            self.model.unit.status = err.status
+            self.logger.error(f"Failed to handle {event} with error: {err}")
+            return
+
+        self.model.unit.status = ActiveStatus()
+
+    def _on_update_status(self, event):
+        try:
+            check_workload_health(
+                self._container, self._container_name, self._health_check_name, self.logger
+            )
         except ErrorWithStatus as err:
             self.model.unit.status = err.status
             self.logger.error(f"Failed to handle {event} with error: {err}")
@@ -120,6 +136,15 @@ class OIDCGatekeeperOperator(CharmBase):
                     # See https://github.com/canonical/oidc-gatekeeper-operator/pull/128
                     # for context on why we need working-dir set here.
                     "working-dir": "/home/authservice",
+                    "on-check-failure": {self._health_check_name: "restart"},
+                }
+            },
+            "checks": {
+                self._health_check_name: {
+                    "override": "replace",
+                    "period": "10s",
+                    "timeout": "3s",
+                    "http": {"url": f"http://localhost:{self._http_port}"},
                 }
             },
         }
