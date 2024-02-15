@@ -5,4 +5,7 @@ oci-image
 # oidc-gatekeeper's current implementation is not compatible
 # with SDI>0.3.
 serialized-data-interface<0.4
-charmed-kubeflow-chisme
+# TODO: unpin this after this chisme PR is released:
+# https://github.com/canonical/charmed-kubeflow-chisme/pull/85
+git+https://github.com/canonical/charmed-kubeflow-chisme.git@kf-5229-add-check-workload-health-utility
+# charmed-kubeflow-chisme
