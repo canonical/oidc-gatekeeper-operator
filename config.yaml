@@ -2,6 +2,10 @@
 # See LICENSE file for licensing details.
 
 options:
+  auth-url:
+    type: string
+    default: "/dex/auth"
+    description: todo
   client-id:
     type: string
     default: 'authservice-oidc'

@@ -79,6 +79,7 @@ class OIDCGatekeeperOperator(CharmBase):
         ret_env_vars = {
             "CLIENT_ID": self.model.config["client-id"],
             "CLIENT_SECRET": secret_key,
+            "OIDC_AUTH_URL": self.model.config["auth-url"],
             "DISABLE_USERINFO": True,
             "OIDC_PROVIDER": f"{self.public_url}/dex",
             "OIDC_SCOPES": self.model.config["oidc-scopes"],
