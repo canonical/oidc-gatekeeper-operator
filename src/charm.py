@@ -77,9 +77,13 @@ class OIDCGatekeeperOperator(CharmBase):
         dex_skip_urls = "/dex/" if not skip_urls else "/dex/," + skip_urls
 
         ret_env_vars = {
+            "AFTER_LOGIN_URL": "/",
+            "AFTER_LOGOUT_URL": self.model.config["public-url"],
+            "AUTHSERVICE_URL_PREFIX": "/authservice/",
             "CLIENT_ID": self.model.config["client-id"],
             "CLIENT_SECRET": secret_key,
             "DISABLE_USERINFO": True,
+            "OIDC_AUTH_URL": "/dex/auth",
             "OIDC_PROVIDER": f"{self.public_url}/dex",
             "OIDC_SCOPES": self.model.config["oidc-scopes"],
             "SERVER_PORT": self._http_port,
@@ -90,8 +94,6 @@ class OIDCGatekeeperOperator(CharmBase):
             # Added to fix https://github.com/canonical/oidc-gatekeeper-operator/issues/64
             "OIDC_STATE_STORE_PATH": "oidc_state.db",
             "SKIP_AUTH_URLS": dex_skip_urls,
-            "AUTHSERVICE_URL_PREFIX": "/authservice/",
-            "AFTER_LOGOUT_URL": self.model.config["public-url"],
         }
 
         if self.model.config["ca-bundle"]:
