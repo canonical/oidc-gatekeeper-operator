@@ -78,7 +78,7 @@ class OIDCGatekeeperOperator(CharmBase):
 
         ret_env_vars = {
             "AFTER_LOGIN_URL": "/",
-            "AFTER_LOGOUT_URL": self.model.config["public-url"],
+            "AFTER_LOGOUT_URL": "/"
             "AUTHSERVICE_URL_PREFIX": "/authservice/",
             "CLIENT_ID": self.model.config["client-id"],
             "CLIENT_SECRET": secret_key,
