@@ -18,7 +18,7 @@ METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 PUBLIC_URL = "test-url"
 APP_NAME = METADATA["name"]
 APP_PREV_VERSION = "ckf-1.7/stable"
-TRUST_PREV_APP  = True
+TRUST_PREV_APP = True
 OIDC_CONFIG = {
     "client-name": "Ambassador Auth OIDC",
     "client-secret": "oidc-client-secret",
@@ -58,7 +58,9 @@ class TestOIDCOperator:
 
     @pytest.mark.abort_on_fail
     async def test_relations(self, ops_test: OpsTest):
-        await ops_test.model.deploy(ISTIO_PILOT, channel=ISTIO_PILOT_CHANNEL, trust=TRUST_ISTIO_PILOT)
+        await ops_test.model.deploy(
+            ISTIO_PILOT, channel=ISTIO_PILOT_CHANNEL, trust=TRUST_ISTIO_PILOT
+        )
         await ops_test.model.deploy(DEX_AUTH, channel=DEX_AUTH_CHANNEL, trust=TRUST_DEX_AUTH)
         await ops_test.model.add_relation(ISTIO_PILOT, DEX_AUTH)
         await ops_test.model.add_relation(f"{ISTIO_PILOT}:ingress", f"{APP_NAME}:ingress")
