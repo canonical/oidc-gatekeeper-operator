@@ -21,7 +21,7 @@ ISTIO_PILOT_CHANNEL = "1.17/stable"
 ISTIO_PILOT_TRUST = True
 
 DEX_AUTH = "dex-auth"
-DEX_AUTH_CHANNEL = "2.31/stable"
+DEX_AUTH_CHANNEL = "2.36/stable"
 DEX_AUTH_TRUST = True
 PUBLIC_URL = "test-url"
 
