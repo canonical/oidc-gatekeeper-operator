@@ -1,28 +1,29 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
+
 from pathlib import Path
 
 import pytest
 import yaml
 from pytest_operator.plugin import OpsTest
 
-# Test dependencies
-DEX_AUTH = "dex-auth"
-DEX_AUTH_CHANNEL = "2.36/stable"
-TRUST_DEX_AUTH = True
-ISTIO_PILOT = "istio-pilot"
-ISTIO_PILOT_CHANNEL = "1.17/stable"
-TRUST_ISTIO_PILOT = True
-
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
-PUBLIC_URL = "test-url"
 APP_NAME = METADATA["name"]
-APP_PREV_VERSION = "ckf-1.7/stable"
-TRUST_PREV_APP = True
+PREVIOUS_RELEASE = "ckf-1.7/stable"
+PREVIOUS_RELEASE_TRUST = True
 OIDC_CONFIG = {
     "client-name": "Ambassador Auth OIDC",
     "client-secret": "oidc-client-secret",
 }
+
+ISTIO_PILOT = "istio-pilot"
+ISTIO_PILOT_CHANNEL = "1.17/stable"
+ISTIO_PILOT_TRUST = True
+
+DEX_AUTH = "dex-auth"
+DEX_AUTH_CHANNEL = "2.36/stable"
+DEX_AUTH_TRUST = True
+PUBLIC_URL = "test-url"
 
 image_path = METADATA["resources"]["oci-image"]["upstream-source"]
 RESOURCES = {"oci-image": image_path}
@@ -46,7 +47,10 @@ class TestOIDCOperator:
         Assert on the unit status.
         """
         await ops_test.model.deploy(
-            pytest.charm_under_test, resources=RESOURCES, trust=True, config=OIDC_CONFIG
+            pytest.charm_under_test,
+            resources=RESOURCES,
+            trust=True,
+            config=OIDC_CONFIG,
         )
 
         await ops_test.model.applications[APP_NAME].set_config({"public-url": PUBLIC_URL})
@@ -59,9 +63,11 @@ class TestOIDCOperator:
     @pytest.mark.abort_on_fail
     async def test_relations(self, ops_test: OpsTest):
         await ops_test.model.deploy(
-            ISTIO_PILOT, channel=ISTIO_PILOT_CHANNEL, trust=TRUST_ISTIO_PILOT
+            ISTIO_PILOT,
+            channel=ISTIO_PILOT_CHANNEL,
+            trust=ISTIO_PILOT_TRUST,
         )
-        await ops_test.model.deploy(DEX_AUTH, channel=DEX_AUTH_CHANNEL, trust=TRUST_DEX_AUTH)
+        await ops_test.model.deploy(DEX_AUTH, channel=DEX_AUTH_CHANNEL, trust=DEX_AUTH_TRUST)
         await ops_test.model.add_relation(ISTIO_PILOT, DEX_AUTH)
         await ops_test.model.add_relation(f"{ISTIO_PILOT}:ingress", f"{APP_NAME}:ingress")
         await ops_test.model.add_relation(
@@ -99,7 +105,10 @@ class TestOIDCOperator:
         """
         print(f"Deploy {APP_NAME} from stable channel")
         await ops_test.model.deploy(
-            APP_NAME, channel=APP_PREV_VERSION, trust=TRUST_PREV_APP, config=OIDC_CONFIG
+            APP_NAME,
+            channel=PREVIOUS_RELEASE,
+            trust=PREVIOUS_RELEASE_TRUST,
+            config=OIDC_CONFIG,
         )
         await ops_test.model.add_relation(f"{ISTIO_PILOT}:ingress", f"{APP_NAME}:ingress")
         await ops_test.model.add_relation(
