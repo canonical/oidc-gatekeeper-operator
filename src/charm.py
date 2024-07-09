@@ -8,6 +8,7 @@ from string import ascii_uppercase, digits
 
 from charmed_kubeflow_chisme.exceptions import ErrorWithStatus
 from charmed_kubeflow_chisme.pebble import update_layer
+from charms.loki_k8s.v1.loki_push_api import LogForwarder
 from charms.observability_libs.v1.kubernetes_service_patch import KubernetesServicePatch
 from lightkube.models.core_v1 import ServicePort
 from ops.charm import CharmBase
@@ -52,6 +53,8 @@ class OIDCGatekeeperOperator(CharmBase):
             self.on["client-secret"].relation_changed,
         ]:
             self.framework.observe(event, self.main)
+
+        self._logging = LogForwarder(charm=self)
 
     def main(self, event):
         try:

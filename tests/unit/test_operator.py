@@ -16,6 +16,14 @@ def harness():
 
 
 @patch("charm.KubernetesServicePatch", lambda x, y: None)
+def test_log_forwarding(harness):
+    """Test LogForwarder initialization."""
+    with patch("charm.LogForwarder") as mock_logging:
+        harness.begin()
+        mock_logging.assert_called_once_with(charm=harness.charm)
+
+
+@patch("charm.KubernetesServicePatch", lambda x, y: None)
 def test_not_leader(harness):
     harness.update_config({"public-url": "10.64.140.43.nip.io"})
     harness.begin_with_initial_hooks()

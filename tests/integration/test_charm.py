@@ -4,6 +4,11 @@ from pathlib import Path
 
 import pytest
 import yaml
+from charmed_kubeflow_chisme.testing import (
+    GRAFANA_AGENT_APP,
+    assert_logging,
+    deploy_and_assert_grafana_agent,
+)
 from pytest_operator.plugin import OpsTest
 
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
@@ -59,6 +64,16 @@ class TestOIDCOperator:
         )
         assert ops_test.model.applications[APP_NAME].units[0].workload_status == "active"
 
+        # Deploying grafana-agent-k8s and add all relations
+        await deploy_and_assert_grafana_agent(
+            ops_test.model, APP_NAME, metrics=False, dashboard=False, logging=True
+        )
+
+    async def test_logging(self, ops_test: OpsTest):
+        """Test logging is defined in relation data bag."""
+        app = ops_test.model.applications[GRAFANA_AGENT_APP]
+        await assert_logging(app)
+
     @pytest.mark.abort_on_fail
     async def test_relations(self, ops_test: OpsTest):
         await ops_test.model.deploy(
@@ -67,12 +82,10 @@ class TestOIDCOperator:
             trust=ISTIO_PILOT_TRUST,
         )
         await ops_test.model.deploy(DEX_AUTH, channel=DEX_AUTH_CHANNEL, trust=DEX_AUTH_TRUST)
-        await ops_test.model.add_relation(ISTIO_PILOT, DEX_AUTH)
-        await ops_test.model.add_relation(f"{ISTIO_PILOT}:ingress", f"{APP_NAME}:ingress")
-        await ops_test.model.add_relation(
-            f"{ISTIO_PILOT}:ingress-auth", f"{APP_NAME}:ingress-auth"
-        )
-        await ops_test.model.add_relation(f"{APP_NAME}:oidc-client", f"{DEX_AUTH}:oidc-client")
+        await ops_test.model.integrate(ISTIO_PILOT, DEX_AUTH)
+        await ops_test.model.integrate(f"{ISTIO_PILOT}:ingress", f"{APP_NAME}:ingress")
+        await ops_test.model.integrate(f"{ISTIO_PILOT}:ingress-auth", f"{APP_NAME}:ingress-auth")
+        await ops_test.model.integrate(f"{APP_NAME}:oidc-client", f"{DEX_AUTH}:oidc-client")
 
         await ops_test.model.applications[DEX_AUTH].set_config({"public-url": PUBLIC_URL})
 
@@ -109,11 +122,9 @@ class TestOIDCOperator:
             trust=PREVIOUS_RELEASE_TRUST,
             config=OIDC_CONFIG,
         )
-        await ops_test.model.add_relation(f"{ISTIO_PILOT}:ingress", f"{APP_NAME}:ingress")
-        await ops_test.model.add_relation(
-            f"{ISTIO_PILOT}:ingress-auth", f"{APP_NAME}:ingress-auth"
-        )
-        await ops_test.model.add_relation(f"{APP_NAME}:oidc-client", f"{DEX_AUTH}:oidc-client")
+        await ops_test.model.integrate(f"{ISTIO_PILOT}:ingress", f"{APP_NAME}:ingress")
+        await ops_test.model.integrate(f"{ISTIO_PILOT}:ingress-auth", f"{APP_NAME}:ingress-auth")
+        await ops_test.model.integrate(f"{APP_NAME}:oidc-client", f"{DEX_AUTH}:oidc-client")
         await ops_test.model.applications[APP_NAME].set_config({"public-url": PUBLIC_URL})
 
         print("Stable charm is deployed, add relations")
@@ -146,6 +157,7 @@ class TestOIDCOperator:
         await ops_test.model.applications[APP_NAME].scale(scale=1)
 
         await ops_test.model.wait_for_idle(
+            [APP_NAME, ISTIO_PILOT, DEX_AUTH],
             status="active",
             raise_on_blocked=True,
             raise_on_error=True,
