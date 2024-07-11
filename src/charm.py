@@ -44,10 +44,6 @@ class OIDCGatekeeperOperator(CharmBase):
             [http_service_port],
         )
 
-        self.public_url = self.model.config["public-url"]
-        if not self.public_url.startswith(("http://", "https://")):
-            self.public_url = f"http://{self.public_url}"
-
         for event in [
             self.on.start,
             self.on.leader_elected,
@@ -68,7 +64,6 @@ class OIDCGatekeeperOperator(CharmBase):
 
     def main(self, event):
         try:
-            self._check_public_url()
             self._check_leader()
             self._check_dex_oidc_config_relation()
             interfaces = self._get_interfaces()
@@ -186,11 +181,6 @@ class OIDCGatekeeperOperator(CharmBase):
             raise ErrorWithStatus(str(err), BlockedStatus)
         return interfaces
 
-    def _check_public_url(self):
-        """Check if `public-url` config is set."""
-        if not self.model.config.get("public-url"):
-            raise ErrorWithStatus("public-url config required", BlockedStatus)
-
     def _configure_mesh(self, interfaces):
         """Update ingress and ingress-auth relations with mesh info."""
         if interfaces["ingress"]:
@@ -218,9 +208,6 @@ class OIDCGatekeeperOperator(CharmBase):
     def _send_info(self, interfaces, secret_key):
         """Send info to oidc-client relation."""
         config = self.model.config
-
-        if not config.get("public-url"):
-            return False
 
         if interfaces["oidc-client"]:
             interfaces["oidc-client"].send_data(

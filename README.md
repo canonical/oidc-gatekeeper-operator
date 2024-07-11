@@ -11,7 +11,6 @@ This repository hosts the Kubernetes Python Operator for OIDC Gatekeeper
 The OIDC Gatekeeper Operator may be deployed using the Juju command line as follows
 ```bash
 juju deploy oidc-gatekeeper
-juju config oidc-gatekeeper client-secret=<client-secret> public-url=http://<public-url>
 ```
 
 Upstream documentation can be found at https://github.com/arrikto/oidc-authservice

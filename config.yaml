@@ -14,10 +14,6 @@ options:
     type: string
     default: ''
     description: OpenID Connect client secret
-  public-url:
-    type: string
-    default: ''
-    description: Publicly-accessible endpoint for cluster
   oidc-scopes:
     type: string
     default: 'profile email groups'
