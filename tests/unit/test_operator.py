@@ -25,7 +25,6 @@ def test_log_forwarding(harness):
 
 @patch("charm.KubernetesServicePatch", lambda x, y: None)
 def test_not_leader(harness):
-    harness.update_config({"public-url": "10.64.140.43.nip.io"})
     harness.begin_with_initial_hooks()
     assert harness.charm.model.unit.status == WaitingStatus("Waiting for leadership")
 
@@ -33,7 +32,6 @@ def test_not_leader(harness):
 @patch("charm.KubernetesServicePatch", lambda x, y: None)
 def test_no_relation(harness):
     harness.set_leader(True)
-    harness.update_config({"public-url": "10.64.140.43.nip.io"})
     harness.add_oci_resource(
         "oci-image",
         {
@@ -50,7 +48,6 @@ def test_no_relation(harness):
 @patch("charm.KubernetesServicePatch", lambda x, y: None)
 def test_with_relation(harness):
     harness.set_leader(True)
-    harness.update_config({"public-url": "10.64.140.43.nip.io"})
     rel_id = harness.add_relation("ingress", "app")
     harness.add_relation_unit(rel_id, "app/0")
 
@@ -65,36 +62,9 @@ def test_with_relation(harness):
     assert isinstance(harness.charm.model.unit.status, ActiveStatus)
 
 
-@pytest.mark.parametrize(
-    "url_prefix,url_result",
-    [
-        (
-            "",
-            "http://",
-        ),
-        ("https://", "https://"),
-        ("http://", "http://"),
-    ],
-)
-@patch("charm.KubernetesServicePatch", lambda x, y: None)
-def test_public_url(harness, url_prefix, url_result):
-    harness.set_leader(True)
-    harness.update_config({"public-url": f"{url_prefix}10.64.140.43.nip.io"})
-    harness.begin_with_initial_hooks()
-
-    plan = harness.get_container_pebble_plan("oidc-authservice")
-
-    assert "OIDC_PROVIDER" in plan.services["oidc-authservice"].environment
-    assert (
-        plan.services["oidc-authservice"].environment["OIDC_PROVIDER"]
-        == f"{url_result}10.64.140.43.nip.io/dex"
-    )
-
-
 @patch("charm.KubernetesServicePatch", lambda x, y: None)
 def test_skip_auth_url_config_has_value(harness):
     harness.set_leader(True)
-    harness.update_config({"public-url": "10.64.140.43.nip.io"})
     harness.update_config({"skip-auth-urls": "/test/,/path1/"})
     harness.begin_with_initial_hooks()
 
@@ -108,7 +78,6 @@ def test_skip_auth_url_config_has_value(harness):
 @patch("charm.KubernetesServicePatch", lambda x, y: None)
 def test_skip_auth_url_config_is_empty(harness):
     harness.set_leader(True)
-    harness.update_config({"public-url": "10.64.140.43.nip.io"})
     harness.begin_with_initial_hooks()
 
     plan = harness.get_container_pebble_plan("oidc-authservice")
@@ -119,7 +88,6 @@ def test_skip_auth_url_config_is_empty(harness):
 @patch("charm.KubernetesServicePatch", lambda x, y: None)
 def test_ca_bundle_config(harness):
     harness.set_leader(True)
-    harness.update_config({"public-url": "10.64.140.43.nip.io"})
     harness.update_config({"ca-bundle": "aaa"})
     harness.begin_with_initial_hooks()
 
@@ -133,7 +101,6 @@ def test_ca_bundle_config(harness):
 @patch("charm.KubernetesServicePatch", lambda x, y: None)
 def test_session_store(harness):
     harness.set_leader(True)
-    harness.update_config({"public-url": "10.64.140.43.nip.io"})
     harness.begin_with_initial_hooks()
 
     plan = harness.get_container_pebble_plan("oidc-authservice")
@@ -154,7 +121,6 @@ def test_pebble_ready_hook_handled(harness: Harness):
     """
     harness.set_leader(True)
     harness.begin()
-    harness.charm._check_public_url = MagicMock()
     harness.charm._get_interfaces = MagicMock()
     harness.charm._check_secret = MagicMock()
     harness.charm._send_info = MagicMock()

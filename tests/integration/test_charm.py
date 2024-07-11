@@ -57,8 +57,6 @@ class TestOIDCOperator:
             config=OIDC_CONFIG,
         )
 
-        await ops_test.model.applications[APP_NAME].set_config({"public-url": PUBLIC_URL})
-
         await ops_test.model.wait_for_idle(
             apps=[APP_NAME], status="active", raise_on_blocked=False, timeout=60 * 10
         )
@@ -86,8 +84,6 @@ class TestOIDCOperator:
         await ops_test.model.integrate(f"{ISTIO_PILOT}:ingress", f"{APP_NAME}:ingress")
         await ops_test.model.integrate(f"{ISTIO_PILOT}:ingress-auth", f"{APP_NAME}:ingress-auth")
         await ops_test.model.integrate(f"{APP_NAME}:oidc-client", f"{DEX_AUTH}:oidc-client")
-
-        await ops_test.model.applications[DEX_AUTH].set_config({"public-url": PUBLIC_URL})
 
         # Not raising on blocked will allow istio-pilot to be deployed
         # without istio-gateway and provide oidc with the data it needs.
@@ -125,7 +121,6 @@ class TestOIDCOperator:
         await ops_test.model.integrate(f"{ISTIO_PILOT}:ingress", f"{APP_NAME}:ingress")
         await ops_test.model.integrate(f"{ISTIO_PILOT}:ingress-auth", f"{APP_NAME}:ingress-auth")
         await ops_test.model.integrate(f"{APP_NAME}:oidc-client", f"{DEX_AUTH}:oidc-client")
-        await ops_test.model.applications[APP_NAME].set_config({"public-url": PUBLIC_URL})
 
         print("Stable charm is deployed, add relations")
         await ops_test.model.wait_for_idle(
