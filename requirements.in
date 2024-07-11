@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 ops
 oci-image
+pydantic
 # oidc-gatekeeper's current implementation is not compatible
 # with SDI>0.3.
 serialized-data-interface<0.4

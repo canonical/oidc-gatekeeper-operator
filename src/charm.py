@@ -9,6 +9,12 @@ from string import ascii_uppercase, digits
 from charmed_kubeflow_chisme.exceptions import ErrorWithStatus
 from charmed_kubeflow_chisme.pebble import update_layer
 from charms.loki_k8s.v1.loki_push_api import LogForwarder
+from charms.dex_auth.v0.dex_oidc_config import (
+    DexOidcConfigObject,
+    DexOidcConfigRelationDataMissingError,
+    DexOidcConfigRelationMissingError,
+    DexOidcConfigRequirer,
+)
 from charms.observability_libs.v1.kubernetes_service_patch import KubernetesServicePatch
 from lightkube.models.core_v1 import ServicePort
 from ops.charm import CharmBase
@@ -16,6 +22,9 @@ from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
 from ops.pebble import Layer
 from serialized_data_interface import NoCompatibleVersions, NoVersionsListed, get_interfaces
+
+
+OIDC_PROVIDER_INFO_RELATION = "oidc-provider-info"
 
 
 class OIDCGatekeeperOperator(CharmBase):
@@ -51,8 +60,11 @@ class OIDCGatekeeperOperator(CharmBase):
             self.on["ingress-auth"].relation_changed,
             self.on["oidc-client"].relation_changed,
             self.on["client-secret"].relation_changed,
+            self.on[OIDC_PROVIDER_INFO_RELATION].relation_changed,
+            self.on[OIDC_PROVIDER_INFO_RELATION].relation_broken,
         ]:
             self.framework.observe(event, self.main)
+        self.framework.observe(self._dex_oidc_config_requirer.on.updated, self.main)
 
         self._logging = LogForwarder(charm=self)
 
@@ -60,6 +72,7 @@ class OIDCGatekeeperOperator(CharmBase):
         try:
             self._check_public_url()
             self._check_leader()
+            self._check_dex_oidc_config_relation()
             interfaces = self._get_interfaces()
             secret_key = self._check_secret()
             self._send_info(interfaces, secret_key)
@@ -72,13 +85,42 @@ class OIDCGatekeeperOperator(CharmBase):
 
         self.model.unit.status = ActiveStatus()
 
+    def _check_dex_oidc_config_relation(self) -> None:
+        """Check for exceptions raised by the library and raises ErrorWithStatus to set the unit status.
+
+        Raises:
+            ErrorWithStatus: and sets the unit to BlockedStatus if the relation hasn't been established
+            ErrorWithStatus: and sets the unit to WaitingStatus if the relation has empty or missing data
+        """
+        try:
+            self._dex_oidc_config_requirer.get_data()
+        except DexOidcConfigRelationMissingError as rel_error:
+            raise ErrorWithStatus(
+                f"{rel_error.message} Please add the missing relation.", BlockedStatus
+            )
+        except DexOidcConfigRelationDataMissingError as data_error:
+            logger.error(f"Empty or missing data. Got: {data_error.message}")
+            raise ErrorWithStatus(
+                f"Empty or missing data in {OIDC_PROVIDER_INFO_RELATION} relation."
+                " This may be transient, but if it persists it is likely an error.",
+                WaitingStatus,
+            )
+
+    @property
+    def _dex_oidc_config_requirer(self) -> DexOidcConfigRequirer:
+        """Return a DexOidcConfigRequirer object that gathers data from an OIDC provider."""
+        return DexOidcConfigRequirer(
+            charm=self,
+            relation_name=OIDC_PROVIDER_INFO_RELATION,
+        )
+
     @property
     def service_environment(self):
         """Return environment variables based on model configuration."""
         secret_key = self._check_secret()
         skip_urls = self.model.config["skip-auth-urls"] or ""
         dex_skip_urls = "/dex/" if not skip_urls else "/dex/," + skip_urls
-
+        oidc_provider = self._dex_oidc_config_requirer.get_data().issuer_url
         ret_env_vars = {
             "AFTER_LOGIN_URL": "/",
             "AFTER_LOGOUT_URL": "/",
@@ -87,7 +129,7 @@ class OIDCGatekeeperOperator(CharmBase):
             "CLIENT_SECRET": secret_key,
             "DISABLE_USERINFO": True,
             "OIDC_AUTH_URL": "/dex/auth",
-            "OIDC_PROVIDER": f"{self.public_url}/dex",
+            "OIDC_PROVIDER": oidc_provider,
             "OIDC_SCOPES": self.model.config["oidc-scopes"],
             "SERVER_PORT": self._http_port,
             "USERID_CLAIM": self.model.config["userid-claim"],
