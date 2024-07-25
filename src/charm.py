@@ -24,7 +24,7 @@ from ops.pebble import Layer
 from serialized_data_interface import NoCompatibleVersions, NoVersionsListed, get_interfaces
 
 
-OIDC_PROVIDER_INFO_RELATION = "oidc-provider-info"
+OIDC_PROVIDER_INFO_RELATION = "dex-oidc-config"
 
 
 class OIDCGatekeeperOperator(CharmBase):

@@ -69,6 +69,7 @@ class ProviderCharm(CharmBase):
         ...
         self._dex_oidc_config_provider = DexOidcConfigProvider(self)
         self.observe(self.on.some_event, self._some_event_handler)
+
     def _some_event_handler(self, ...):
         # This will update the relation data bag with the issuer URL 
         try:
@@ -171,7 +172,7 @@ class DexOidcConfigRequirer(Object):
 
     Args:
         charm (CharmBase): the provider application
-        refresh_event: (list, optional): list of BoundEvents that this manager should handle.
+        refresh_events: (list, optional): list of BoundEvents that this manager should handle.
                        Use this to update the data sent on this relation on demand.
         relation_name (str, optional): the name of the relation
 
@@ -185,7 +186,7 @@ class DexOidcConfigRequirer(Object):
     def __init__(
         self,
         charm: CharmBase,
-        refresh_event: Optional[Union[BoundEvent, List[BoundEvent]]] = None,
+        refresh_events: Optional[List[BoundEvent]] = None,
         relation_name: Optional[str] = DEFAULT_RELATION_NAME,
     ):
         super().__init__(charm, relation_name)
@@ -201,10 +202,8 @@ class DexOidcConfigRequirer(Object):
             self._charm.on[self._relation_name].relation_broken, self._on_relation_broken
         )
 
-        if refresh_event:
-            if not isinstance(refresh_event, (tuple, list)):
-                refresh_event = [refresh_event]
-            for evt in refresh_event:
+        if refresh_events:
+            for evt in refresh_events:
                 self.framework.observe(evt, self._on_relation_changed)
 
     def get_data(self) -> DexOidcConfigObject:
@@ -236,11 +235,13 @@ class DexOidcConfigRequirerWrapper(Object):
         self.relation_name = relation_name
 
     @staticmethod
-    def _validate_relation(relation: Relation) -> None:
+    def _validate_relation(relation: Optional[Relation]) -> None:
         """Series of checks for the relation and relation data.
 
         Args:
-            relation (Relation): the relation object to run the checks on
+            relation (optional, Relation): the relation object to run the checks on.
+              This object must always come from a call of get_relation, which
+              can either return a Relation object or None.
 
         Raises:
             DexOidcConfigRelationDataMissingError if data is missing or incomplete
@@ -289,7 +290,7 @@ class DexOidcConfigProvider(Object):
     Args:
         charm (CharmBase): the provider application
         issuer_url (str): This is the canonical URL that OIDC clients MUST use to refer to dex.
-        refresh_event: (list, optional): list of BoundEvents that this manager should handle.  Use this to update
+        refresh_events: (list, optional): list of BoundEvents that this manager should handle.  Use this to update
                        the data sent on this relation on demand.
         relation_name (str, optional): the name of the relation
 
@@ -302,7 +303,7 @@ class DexOidcConfigProvider(Object):
         self,
         charm: CharmBase,
         issuer_url: str,
-        refresh_event: Optional[Union[BoundEvent, List[BoundEvent]]] = None,
+        refresh_events: Optional[List[BoundEvent]] = None,
         relation_name: Optional[str] = DEFAULT_RELATION_NAME,
     ):
         super().__init__(charm, relation_name)
@@ -315,10 +316,8 @@ class DexOidcConfigProvider(Object):
 
         self.framework.observe(self.charm.on[self.relation_name].relation_created, self._send_data)
 
-        if refresh_event:
-            if not isinstance(refresh_event, (tuple, list)):
-                refresh_event = [refresh_event]
-            for evt in refresh_event:
+        if refresh_events:
+            for evt in refresh_events:
                 self.framework.observe(evt, self._send_data)
 
     def _send_data(self, _) -> None:
@@ -360,6 +359,8 @@ class DexOidcConfigProviderWrapper(Object):
                 "DexOidcConfigProvider handled send_data event when it is not the leader."
                 "Skipping event - no data sent."
             )
+            return
+
         # Update the relation data bag with Dex's OIDC configuration
         relations = self.charm.model.relations[self.relation_name]
 
