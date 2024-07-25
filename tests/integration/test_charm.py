@@ -57,6 +57,16 @@ class TestOIDCOperator:
             config=OIDC_CONFIG,
         )
 
+        # Deploying dex-auth is now a hard requirement for this charm as
+        # a dex-oidc-config requirer; otherwise it will block
+        await ops_test.model.deploy(DEX_AUTH, channel=DEX_AUTH_CHANNEL, trust=DEX_AUTH_TRUST)
+        await ops_test.model.wait_for_idle(
+            apps=[DEX_AUTH], status="active", raise_on_blocked=False, timeout=60 * 10
+        )
+        await ops_test.model.integrate(
+            f"{APP_NAME}:dex-oidc-config", f"{DEX_AUTH}:dex-oidc-config"
+        )
+
         await ops_test.model.wait_for_idle(
             apps=[APP_NAME], status="active", raise_on_blocked=False, timeout=60 * 10
         )
@@ -65,13 +75,6 @@ class TestOIDCOperator:
         # Deploying grafana-agent-k8s and add all relations
         await deploy_and_assert_grafana_agent(
             ops_test.model, APP_NAME, metrics=False, dashboard=False, logging=True
-        )
-
-        # Deploying dex-auth is now a hard requirement for this charm as
-        # a dex-oidc-config requirer; otherwise it will block
-        await ops_test.model.deploy(DEX_AUTH, channel=DEX_AUTH_CHANNEL, trust=DEX_AUTH_TRUST)
-        await ops_test.model.integrate(
-            f"{APP_NAME}:dex-oidc-config", f"{DEX_AUTH}:dex-oidc-config"
         )
 
     async def test_logging(self, ops_test: OpsTest):
