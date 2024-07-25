@@ -8,13 +8,12 @@ from string import ascii_uppercase, digits
 
 from charmed_kubeflow_chisme.exceptions import ErrorWithStatus
 from charmed_kubeflow_chisme.pebble import update_layer
-from charms.loki_k8s.v1.loki_push_api import LogForwarder
 from charms.dex_auth.v0.dex_oidc_config import (
-    DexOidcConfigObject,
     DexOidcConfigRelationDataMissingError,
     DexOidcConfigRelationMissingError,
     DexOidcConfigRequirer,
 )
+from charms.loki_k8s.v1.loki_push_api import LogForwarder
 from charms.observability_libs.v1.kubernetes_service_patch import KubernetesServicePatch
 from lightkube.models.core_v1 import ServicePort
 from ops.charm import CharmBase
@@ -22,7 +21,6 @@ from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
 from ops.pebble import Layer
 from serialized_data_interface import NoCompatibleVersions, NoVersionsListed, get_interfaces
-
 
 OIDC_PROVIDER_INFO_RELATION = "dex-oidc-config"
 
@@ -86,11 +84,11 @@ class OIDCGatekeeperOperator(CharmBase):
         self.model.unit.status = ActiveStatus()
 
     def _check_dex_oidc_config_relation(self) -> None:
-        """Check for exceptions raised by the library and raises ErrorWithStatus to set the unit status.
+        """Check for exceptions from the library and raises ErrorWithStatus to set the unit status.
 
         Raises:
-            ErrorWithStatus: and sets the unit to BlockedStatus if the relation hasn't been established
-            ErrorWithStatus: and sets the unit to WaitingStatus if the relation has empty or missing data
+            ErrorWithStatus: if the relation hasn't been established, set unit to BlockedStatus
+            ErrorWithStatus: if the relation has empty or missing data, set unit to WaitingStatus
         """
         try:
             self._dex_oidc_config_requirer.get_data()
@@ -99,7 +97,7 @@ class OIDCGatekeeperOperator(CharmBase):
                 f"{rel_error.message} Please add the missing relation.", BlockedStatus
             )
         except DexOidcConfigRelationDataMissingError as data_error:
-            logger.error(f"Empty or missing data. Got: {data_error.message}")
+            self.logger.error(f"Empty or missing data. Got: {data_error.message}")
             raise ErrorWithStatus(
                 f"Empty or missing data in {OIDC_PROVIDER_INFO_RELATION} relation."
                 " This may be transient, but if it persists it is likely an error.",
