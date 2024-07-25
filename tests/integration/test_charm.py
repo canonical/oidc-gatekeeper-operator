@@ -84,6 +84,9 @@ class TestOIDCOperator:
         await ops_test.model.integrate(f"{ISTIO_PILOT}:ingress", f"{APP_NAME}:ingress")
         await ops_test.model.integrate(f"{ISTIO_PILOT}:ingress-auth", f"{APP_NAME}:ingress-auth")
         await ops_test.model.integrate(f"{APP_NAME}:oidc-client", f"{DEX_AUTH}:oidc-client")
+        await ops_test.model.integrate(
+            f"{APP_NAME}:dex-oidc-config", f"{DEX_AUTH}:dex-oidc-config"
+        )
 
         # Not raising on blocked will allow istio-pilot to be deployed
         # without istio-gateway and provide oidc with the data it needs.

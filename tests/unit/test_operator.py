@@ -4,7 +4,13 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 import yaml
-from ops.model import ActiveStatus, WaitingStatus
+from charmed_kubeflow_chisme.exceptions import ErrorWithStatus
+from charms.dex_auth.v0.dex_oidc_config import (
+    DexOidcConfigRelationDataMissingError,
+    DexOidcConfigRelationMissingError,
+    DexOidcConfigRequirer,
+)
+from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
 from ops.testing import Harness
 
 from charm import OIDCGatekeeperOperator
@@ -32,6 +38,9 @@ def test_not_leader(harness):
 @patch("charm.KubernetesServicePatch", lambda x, y: None)
 def test_no_relation(harness):
     harness.set_leader(True)
+    # Add dex-oidc-config relation by default; otherwise charm will block
+    harness.add_relation("dex-oidc-config", "app", app_data={"issuer-url": "http://dex.io/dex"})
+
     harness.add_oci_resource(
         "oci-image",
         {
@@ -48,6 +57,10 @@ def test_no_relation(harness):
 @patch("charm.KubernetesServicePatch", lambda x, y: None)
 def test_with_relation(harness):
     harness.set_leader(True)
+
+    # Add dex-oidc-config relation by default; otherwise charm will block
+    harness.add_relation("dex-oidc-config", "app", app_data={"issuer-url": "http://dex.io/dex"})
+
     rel_id = harness.add_relation("ingress", "app")
     harness.add_relation_unit(rel_id, "app/0")
 
@@ -66,6 +79,10 @@ def test_with_relation(harness):
 def test_skip_auth_url_config_has_value(harness):
     harness.set_leader(True)
     harness.update_config({"skip-auth-urls": "/test/,/path1/"})
+
+    # Add dex-oidc-config relation by default; otherwise charm will block
+    harness.add_relation("dex-oidc-config", "app", app_data={"issuer-url": "http://dex.io/dex"})
+
     harness.begin_with_initial_hooks()
 
     plan = harness.get_container_pebble_plan("oidc-authservice")
@@ -78,6 +95,9 @@ def test_skip_auth_url_config_has_value(harness):
 @patch("charm.KubernetesServicePatch", lambda x, y: None)
 def test_skip_auth_url_config_is_empty(harness):
     harness.set_leader(True)
+    # Add dex-oidc-config relation by default; otherwise charm will block
+    harness.add_relation("dex-oidc-config", "app", app_data={"issuer-url": "http://dex.io/dex"})
+
     harness.begin_with_initial_hooks()
 
     plan = harness.get_container_pebble_plan("oidc-authservice")
@@ -89,6 +109,9 @@ def test_skip_auth_url_config_is_empty(harness):
 def test_ca_bundle_config(harness):
     harness.set_leader(True)
     harness.update_config({"ca-bundle": "aaa"})
+    # Add dex-oidc-config relation by default; otherwise charm will block
+    harness.add_relation("dex-oidc-config", "app", app_data={"issuer-url": "http://dex.io/dex"})
+
     harness.begin_with_initial_hooks()
 
     plan = harness.get_container_pebble_plan("oidc-authservice")
@@ -101,6 +124,9 @@ def test_ca_bundle_config(harness):
 @patch("charm.KubernetesServicePatch", lambda x, y: None)
 def test_session_store(harness):
     harness.set_leader(True)
+    # Add dex-oidc-config relation by default; otherwise charm will block
+    harness.add_relation("dex-oidc-config", "app", app_data={"issuer-url": "http://dex.io/dex"})
+
     harness.begin_with_initial_hooks()
 
     plan = harness.get_container_pebble_plan("oidc-authservice")
@@ -113,13 +139,16 @@ def test_session_store(harness):
     )
 
 
-@patch("charm.KubernetesServicePatch", lambda x, y: None)
 @patch("charm.update_layer", MagicMock())
+@patch("charm.KubernetesServicePatch", lambda x, y: None)
 def test_pebble_ready_hook_handled(harness: Harness):
     """
     Test if we handle oidc_authservice_pebble_ready hook. This test fails if we don't.
     """
     harness.set_leader(True)
+    # Add dex-oidc-config relation by default; otherwise charm will block
+    harness.add_relation("dex-oidc-config", "app", app_data={"issuer-url": "http://dex.io/dex"})
+
     harness.begin()
     harness.charm._get_interfaces = MagicMock()
     harness.charm._check_secret = MagicMock()
@@ -129,3 +158,60 @@ def test_pebble_ready_hook_handled(harness: Harness):
     harness.charm.on.oidc_authservice_pebble_ready.emit(harness.charm)
 
     assert isinstance(harness.charm.model.unit.status, ActiveStatus)
+
+
+@patch("charm.KubernetesServicePatch", lambda x, y: None)
+def test_charm_blocks_on_missing_dex_oidc_config_relation(harness):
+    """Test the charm goes into BlockedStatus when the relation is missing."""
+    harness.set_leader(True)
+    harness.add_oci_resource(
+        "oci-image",
+        {
+            "registrypath": "ci-test",
+            "username": "",
+            "password": "",
+        },
+    )
+    harness.begin_with_initial_hooks()
+
+    assert isinstance(harness.charm.model.unit.status, BlockedStatus)
+    assert (
+        "Missing relation with a Dex OIDC config provider"
+        in harness.charm.model.unit.status.message
+    )
+
+
+@patch("charm.KubernetesServicePatch", lambda x, y: None)
+def test_service_environment_uses_data_from_relation(harness):
+    """Test the service_environment property has the correct values set by the relation data."""
+    harness.set_leader(True)
+    # Add the client-secret peer relation as it is required to render the service environment
+    harness.add_relation("client-secret", harness.model.app.name)
+
+    expected_oidc_provider = "http://dex.io/dex"
+    harness.add_relation("dex-oidc-config", "app", app_data={"issuer-url": expected_oidc_provider})
+
+    harness.begin()
+
+    service_environment = harness.charm.service_environment
+    assert service_environment["OIDC_PROVIDER"] == expected_oidc_provider
+
+
+@patch("charm.KubernetesServicePatch", lambda x, y: None)
+@pytest.mark.parametrize(
+    "expected_raise, expected_status",
+    (
+        (DexOidcConfigRelationMissingError, BlockedStatus),
+        (DexOidcConfigRelationDataMissingError("Empty or missing data"), WaitingStatus),
+    ),
+)
+@patch.object(DexOidcConfigRequirer, "get_data")
+def test_check_dex_oidc_config_relation(mocked_get_data, expected_raise, expected_status, harness):
+    """Verify the method raises ErrorWithStatus with correct status."""
+    harness.begin()
+    mocked_get_data.side_effect = expected_raise
+    with pytest.raises(ErrorWithStatus) as raised_exception:
+        harness.charm._check_dex_oidc_config_relation()
+
+    # We can only check what status is sent to the main handler, which is the one setting it
+    assert raised_exception.value.status_type == expected_status
