@@ -67,6 +67,13 @@ class TestOIDCOperator:
             ops_test.model, APP_NAME, metrics=False, dashboard=False, logging=True
         )
 
+        # Deploying dex-auth is now a hard requirement for this charm as
+        # a dex-oidc-config requirer; otherwise it will block
+        await ops_test.model.deploy(DEX_AUTH, channel=DEX_AUTH_CHANNEL, trust=DEX_AUTH_TRUST)
+        await ops_test.model.integrate(
+            f"{APP_NAME}:dex-oidc-config", f"{DEX_AUTH}:dex-oidc-config"
+        )
+
     async def test_logging(self, ops_test: OpsTest):
         """Test logging is defined in relation data bag."""
         app = ops_test.model.applications[GRAFANA_AGENT_APP]
@@ -79,14 +86,10 @@ class TestOIDCOperator:
             channel=ISTIO_PILOT_CHANNEL,
             trust=ISTIO_PILOT_TRUST,
         )
-        await ops_test.model.deploy(DEX_AUTH, channel=DEX_AUTH_CHANNEL, trust=DEX_AUTH_TRUST)
         await ops_test.model.integrate(ISTIO_PILOT, DEX_AUTH)
         await ops_test.model.integrate(f"{ISTIO_PILOT}:ingress", f"{APP_NAME}:ingress")
         await ops_test.model.integrate(f"{ISTIO_PILOT}:ingress-auth", f"{APP_NAME}:ingress-auth")
         await ops_test.model.integrate(f"{APP_NAME}:oidc-client", f"{DEX_AUTH}:oidc-client")
-        await ops_test.model.integrate(
-            f"{APP_NAME}:dex-oidc-config", f"{DEX_AUTH}:dex-oidc-config"
-        )
 
         # Not raising on blocked will allow istio-pilot to be deployed
         # without istio-gateway and provide oidc with the data it needs.
