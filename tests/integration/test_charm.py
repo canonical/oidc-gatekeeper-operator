@@ -131,6 +131,10 @@ class TestOIDCOperator:
         await ops_test.model.integrate(f"{ISTIO_PILOT}:ingress-auth", f"{APP_NAME}:ingress-auth")
         await ops_test.model.integrate(f"{APP_NAME}:oidc-client", f"{DEX_AUTH}:oidc-client")
 
+        # TODO: remove after releasing ckf-1.9/stable, this has been preserved to avoid breaking
+        # integration tests.
+        await ops_test.model.applications[APP_NAME].set_config({"public-url": "http://foo.io"})
+
         print("Stable charm is deployed, add relations")
         await ops_test.model.wait_for_idle(
             [APP_NAME, ISTIO_PILOT, DEX_AUTH],
