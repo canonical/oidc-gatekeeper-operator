@@ -8,6 +8,11 @@ from string import ascii_uppercase, digits
 
 from charmed_kubeflow_chisme.exceptions import ErrorWithStatus
 from charmed_kubeflow_chisme.pebble import update_layer
+from charms.dex_auth.v0.dex_oidc_config import (
+    DexOidcConfigRelationDataMissingError,
+    DexOidcConfigRelationMissingError,
+    DexOidcConfigRequirer,
+)
 from charms.loki_k8s.v1.loki_push_api import LogForwarder
 from charms.observability_libs.v1.kubernetes_service_patch import KubernetesServicePatch
 from lightkube.models.core_v1 import ServicePort
@@ -16,6 +21,8 @@ from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
 from ops.pebble import Layer
 from serialized_data_interface import NoCompatibleVersions, NoVersionsListed, get_interfaces
+
+OIDC_PROVIDER_INFO_RELATION = "dex-oidc-config"
 
 
 class OIDCGatekeeperOperator(CharmBase):
@@ -30,16 +37,16 @@ class OIDCGatekeeperOperator(CharmBase):
         self._container_name = "oidc-authservice"
         self._container = self.unit.get_container(self._container_name)
         self.pebble_service_name = "oidc-authservice"
+        self._dex_oidc_config_requirer = DexOidcConfigRequirer(
+            charm=self,
+            relation_name=OIDC_PROVIDER_INFO_RELATION,
+        )
 
         http_service_port = ServicePort(self._http_port, name="http-port")
         self.service_patcher = KubernetesServicePatch(
             self,
             [http_service_port],
         )
-
-        self.public_url = self.model.config["public-url"]
-        if not self.public_url.startswith(("http://", "https://")):
-            self.public_url = f"http://{self.public_url}"
 
         for event in [
             self.on.start,
@@ -51,6 +58,9 @@ class OIDCGatekeeperOperator(CharmBase):
             self.on["ingress-auth"].relation_changed,
             self.on["oidc-client"].relation_changed,
             self.on["client-secret"].relation_changed,
+            self.on[OIDC_PROVIDER_INFO_RELATION].relation_changed,
+            self.on[OIDC_PROVIDER_INFO_RELATION].relation_broken,
+            self._dex_oidc_config_requirer.on.updated,
         ]:
             self.framework.observe(event, self.main)
 
@@ -58,8 +68,8 @@ class OIDCGatekeeperOperator(CharmBase):
 
     def main(self, event):
         try:
-            self._check_public_url()
             self._check_leader()
+            self._check_dex_oidc_config_relation()
             interfaces = self._get_interfaces()
             secret_key = self._check_secret()
             self._send_info(interfaces, secret_key)
@@ -72,13 +82,34 @@ class OIDCGatekeeperOperator(CharmBase):
 
         self.model.unit.status = ActiveStatus()
 
+    def _check_dex_oidc_config_relation(self) -> None:
+        """Check for exceptions from the library and raises ErrorWithStatus to set the unit status.
+
+        Raises:
+            ErrorWithStatus: if the relation hasn't been established, set unit to BlockedStatus
+            ErrorWithStatus: if the relation has empty or missing data, set unit to WaitingStatus
+        """
+        try:
+            self._dex_oidc_config_requirer.get_data()
+        except DexOidcConfigRelationMissingError as rel_error:
+            raise ErrorWithStatus(
+                f"{rel_error.message} Please add the missing relation.", BlockedStatus
+            )
+        except DexOidcConfigRelationDataMissingError as data_error:
+            self.logger.error(f"Empty or missing data. Got: {data_error.message}")
+            raise ErrorWithStatus(
+                f"Empty or missing data in {OIDC_PROVIDER_INFO_RELATION} relation."
+                " This may be transient, but if it persists it is likely an error.",
+                WaitingStatus,
+            )
+
     @property
     def service_environment(self):
         """Return environment variables based on model configuration."""
         secret_key = self._check_secret()
         skip_urls = self.model.config["skip-auth-urls"] or ""
         dex_skip_urls = "/dex/" if not skip_urls else "/dex/," + skip_urls
-
+        oidc_provider = self._dex_oidc_config_requirer.get_data().issuer_url
         ret_env_vars = {
             "AFTER_LOGIN_URL": "/",
             "AFTER_LOGOUT_URL": "/",
@@ -87,7 +118,7 @@ class OIDCGatekeeperOperator(CharmBase):
             "CLIENT_SECRET": secret_key,
             "DISABLE_USERINFO": True,
             "OIDC_AUTH_URL": "/dex/auth",
-            "OIDC_PROVIDER": f"{self.public_url}/dex",
+            "OIDC_PROVIDER": oidc_provider,
             "OIDC_SCOPES": self.model.config["oidc-scopes"],
             "SERVER_PORT": self._http_port,
             "USERID_CLAIM": self.model.config["userid-claim"],
@@ -146,11 +177,6 @@ class OIDCGatekeeperOperator(CharmBase):
             raise ErrorWithStatus(str(err), BlockedStatus)
         return interfaces
 
-    def _check_public_url(self):
-        """Check if `public-url` config is set."""
-        if not self.model.config.get("public-url"):
-            raise ErrorWithStatus("public-url config required", BlockedStatus)
-
     def _configure_mesh(self, interfaces):
         """Update ingress and ingress-auth relations with mesh info."""
         if interfaces["ingress"]:
@@ -178,9 +204,6 @@ class OIDCGatekeeperOperator(CharmBase):
     def _send_info(self, interfaces, secret_key):
         """Send info to oidc-client relation."""
         config = self.model.config
-
-        if not config.get("public-url"):
-            return False
 
         if interfaces["oidc-client"]:
             interfaces["oidc-client"].send_data(

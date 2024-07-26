@@ -2,6 +2,8 @@
 # See LICENSE file for licensing details.
 ops
 oci-image
+# required by dex-oidc-config library
+pydantic
 # oidc-gatekeeper's current implementation is not compatible
 # with SDI>0.3.
 serialized-data-interface<0.4

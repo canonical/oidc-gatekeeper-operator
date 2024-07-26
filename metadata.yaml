@@ -52,6 +52,8 @@ provides:
     versions: [v1]
     __schema_source: https://raw.githubusercontent.com/canonical/operator-schemas/oidc-schemas/oidc-client.yaml
 requires:
+  dex-oidc-config:
+    interface: dex-oidc-config
   ingress:
     interface: ingress
     schema:
