@@ -37,6 +37,10 @@ class OIDCGatekeeperOperator(CharmBase):
         self._container_name = "oidc-authservice"
         self._container = self.unit.get_container(self._container_name)
         self.pebble_service_name = "oidc-authservice"
+        self._dex_oidc_config_requirer = DexOidcConfigRequirer(
+            charm=self,
+            relation_name=OIDC_PROVIDER_INFO_RELATION,
+        )
 
         http_service_port = ServicePort(self._http_port, name="http-port")
         self.service_patcher = KubernetesServicePatch(
@@ -56,9 +60,9 @@ class OIDCGatekeeperOperator(CharmBase):
             self.on["client-secret"].relation_changed,
             self.on[OIDC_PROVIDER_INFO_RELATION].relation_changed,
             self.on[OIDC_PROVIDER_INFO_RELATION].relation_broken,
+            self._dex_oidc_config_requirer.on.updated,
         ]:
             self.framework.observe(event, self.main)
-        self.framework.observe(self._dex_oidc_config_requirer.on.updated, self.main)
 
         self._logging = LogForwarder(charm=self)
 
@@ -98,14 +102,6 @@ class OIDCGatekeeperOperator(CharmBase):
                 " This may be transient, but if it persists it is likely an error.",
                 WaitingStatus,
             )
-
-    @property
-    def _dex_oidc_config_requirer(self) -> DexOidcConfigRequirer:
-        """Return a DexOidcConfigRequirer object that gathers data from an OIDC provider."""
-        return DexOidcConfigRequirer(
-            charm=self,
-            relation_name=OIDC_PROVIDER_INFO_RELATION,
-        )
 
     @property
     def service_environment(self):
