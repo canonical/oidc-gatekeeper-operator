@@ -10,10 +10,17 @@ This repository hosts the Kubernetes Python Operator for OIDC Gatekeeper
 
 The OIDC Gatekeeper Operator may be deployed using the Juju command line as follows
 ```bash
-juju deploy oidc-gatekeeper
+juju deploy oidc-gatekeeper --trust
+juju deploy dex-auth --trust
+juju config oidc-gatekeeper client-secret=<client-secret, optional>
+juju integrate dex-auth:dex-oidc-config oidc-gatekeeper:dex-oidc-config
 ```
 
 Upstream documentation can be found at https://github.com/arrikto/oidc-authservice
+
+## Limitations
+
+This charm has been designed around Charmed Kubeflow and it will not work as an OIDC client outside of a model where `dex-auth` and Charmed Kubeflow are deployed. There are currently no plans to change this behaviour.
 
 ## Looking for a fully supported platform for MLOps?
 
