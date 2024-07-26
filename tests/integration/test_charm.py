@@ -57,7 +57,15 @@ class TestOIDCOperator:
             config=OIDC_CONFIG,
         )
 
-        await ops_test.model.applications[APP_NAME].set_config({"public-url": PUBLIC_URL})
+        # Deploying dex-auth is a hard requirement for this charm as
+        # a dex-oidc-config requirer; otherwise it will block
+        await ops_test.model.deploy(DEX_AUTH, channel=DEX_AUTH_CHANNEL, trust=DEX_AUTH_TRUST)
+        await ops_test.model.wait_for_idle(
+            apps=[DEX_AUTH], status="active", raise_on_blocked=False, timeout=60 * 10
+        )
+        await ops_test.model.integrate(
+            f"{APP_NAME}:dex-oidc-config", f"{DEX_AUTH}:dex-oidc-config"
+        )
 
         await ops_test.model.wait_for_idle(
             apps=[APP_NAME], status="active", raise_on_blocked=False, timeout=60 * 10
@@ -81,13 +89,10 @@ class TestOIDCOperator:
             channel=ISTIO_PILOT_CHANNEL,
             trust=ISTIO_PILOT_TRUST,
         )
-        await ops_test.model.deploy(DEX_AUTH, channel=DEX_AUTH_CHANNEL, trust=DEX_AUTH_TRUST)
         await ops_test.model.integrate(ISTIO_PILOT, DEX_AUTH)
         await ops_test.model.integrate(f"{ISTIO_PILOT}:ingress", f"{APP_NAME}:ingress")
         await ops_test.model.integrate(f"{ISTIO_PILOT}:ingress-auth", f"{APP_NAME}:ingress-auth")
         await ops_test.model.integrate(f"{APP_NAME}:oidc-client", f"{DEX_AUTH}:oidc-client")
-
-        await ops_test.model.applications[DEX_AUTH].set_config({"public-url": PUBLIC_URL})
 
         # Not raising on blocked will allow istio-pilot to be deployed
         # without istio-gateway and provide oidc with the data it needs.
@@ -125,7 +130,10 @@ class TestOIDCOperator:
         await ops_test.model.integrate(f"{ISTIO_PILOT}:ingress", f"{APP_NAME}:ingress")
         await ops_test.model.integrate(f"{ISTIO_PILOT}:ingress-auth", f"{APP_NAME}:ingress-auth")
         await ops_test.model.integrate(f"{APP_NAME}:oidc-client", f"{DEX_AUTH}:oidc-client")
-        await ops_test.model.applications[APP_NAME].set_config({"public-url": PUBLIC_URL})
+
+        # TODO: remove after releasing ckf-1.9/stable, this has been preserved to avoid breaking
+        # integration tests.
+        await ops_test.model.applications[APP_NAME].set_config({"public-url": "http://foo.io"})
 
         print("Stable charm is deployed, add relations")
         await ops_test.model.wait_for_idle(
