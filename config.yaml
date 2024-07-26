@@ -38,11 +38,3 @@ options:
     type: string
     default: 'email'
     description: OpenID Connect claim whose value will be used as the userid.
-  public-url:
-    type: string
-    default: ''
-    description: |
-      DEPRECATED - Please leave empty. This configuration option will be removed soon.
-      It has been preserved to avoid breaking compatibility with existing deployments.
-      If the OIDC provider URL has to be changed, please check dex-auth's issuer-url.
-      Publicly-accessible endpoint for cluster

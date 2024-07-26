@@ -57,7 +57,7 @@ class TestOIDCOperator:
             config=OIDC_CONFIG,
         )
 
-        # Deploying dex-auth is now a hard requirement for this charm as
+        # Deploying dex-auth is a hard requirement for this charm as
         # a dex-oidc-config requirer; otherwise it will block
         await ops_test.model.deploy(DEX_AUTH, channel=DEX_AUTH_CHANNEL, trust=DEX_AUTH_TRUST)
         await ops_test.model.wait_for_idle(
