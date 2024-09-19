@@ -2,6 +2,12 @@ output "app_name" {
   value = juju_application.oidc_gatekeeper.name
 }
 
+output "peers" {
+  value = {
+    client_secret = "client-secret",
+  }
+}
+
 output "provides" {
   value = {
     oidc_client = "oidc-client",
