@@ -60,8 +60,8 @@ jobs:
         with:
           provider: microk8s
           channel: 1.25-strict/stable
-          juju-channel: 3.4/stable
-          charmcraft-channel: latest/stable
+          juju-channel: 3.6/stable
+          charmcraft-channel: 3.x/stable
 
       - name: Test
         run: sg snap_microk8s -c "tox -vve integration -- --model testing"
