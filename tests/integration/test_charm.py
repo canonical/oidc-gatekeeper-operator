@@ -13,7 +13,7 @@ from pytest_operator.plugin import OpsTest
 
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 APP_NAME = METADATA["name"]
-PREVIOUS_RELEASE = "ckf-1.8/stable"
+PREVIOUS_RELEASE = "ckf-1.9/stable"
 PREVIOUS_RELEASE_TRUST = True
 OIDC_CONFIG = {
     "client-name": "Ambassador Auth OIDC",
@@ -21,11 +21,11 @@ OIDC_CONFIG = {
 }
 
 ISTIO_PILOT = "istio-pilot"
-ISTIO_PILOT_CHANNEL = "latest/edge"
+ISTIO_PILOT_CHANNEL = "1.24/stable"
 ISTIO_PILOT_TRUST = True
 
 DEX_AUTH = "dex-auth"
-DEX_AUTH_CHANNEL = "latest/edge"
+DEX_AUTH_CHANNEL = "2.41/stable"
 DEX_AUTH_TRUST = True
 PUBLIC_URL = "test-url"
 
