@@ -64,7 +64,7 @@ class TestOIDCOperator:
             apps=[DEX_AUTH], status="active", raise_on_blocked=False, timeout=60 * 10
         )
         await ops_test.model.integrate(
-            f"{APP_NAME}:dex-oidc-config", f"{DEX_AUTH}:dex-oidc-config"
+            f"{APP_NAME}:dex-oidc-configg", f"{DEX_AUTH}:dex-oidc-config"
         )
 
         await ops_test.model.wait_for_idle(
