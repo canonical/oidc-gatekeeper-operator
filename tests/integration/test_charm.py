@@ -107,13 +107,9 @@ class TestOIDCOperator:
     @pytest.mark.abort_on_fail
     @pytest.mark.timeout(1200)
     async def test_upgrade(self, ops_test: OpsTest):
-        """Test that charm can be upgraded from podspec to sidecar.
+        """Test that charm can be upgraded from previous stable channel.
 
         For this test we use APP_PREV_VERSION channel as the source for podspec charm.
-
-        Note: juju has a bug due to which you have to first scale podspec charm to 0,
-        then refresh, then scale up newly deployed app.
-        See https://github.com/juju/juju/pull/15701 for more info.
         """
         print(f"Deploy {APP_NAME} from stable channel")
         await ops_test.model.deploy(
@@ -139,10 +135,8 @@ class TestOIDCOperator:
             raise_on_error=True,
             timeout=600,
         )
-        print(f"Scale {APP_NAME} to 0 units")
-        await ops_test.model.applications[APP_NAME].scale(scale=0)
 
-        print("Try to refresh stable charm to locally built")
+        print("Refresh stable charm to locally built")
         # temporary measure while we don't have a solution for this:
         # * https://github.com/juju/python-libjuju/issues/881
         # Currently `application.local_refresh` doesn't work as expected.
@@ -156,9 +150,6 @@ class TestOIDCOperator:
                 f"oci-image='{image_path}'",
             ]
         )
-
-        print(f"Scale {APP_NAME} to 1 unit")
-        await ops_test.model.applications[APP_NAME].scale(scale=1)
 
         await ops_test.model.wait_for_idle(
             [APP_NAME, ISTIO_PILOT.charm, DEX_AUTH.charm],
