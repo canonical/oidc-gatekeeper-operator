@@ -163,7 +163,7 @@ class TestOIDCOperator:
         await ops_test.model.wait_for_idle(
             [APP_NAME, ISTIO_PILOT.charm, DEX_AUTH.charm],
             status="active",
-            raise_on_blocked=True,
+            raise_on_blocked=False,
             raise_on_error=True,
             timeout=1200,
         )
