@@ -9,6 +9,7 @@ from charmed_kubeflow_chisme.testing import (
     assert_logging,
     deploy_and_assert_grafana_agent,
 )
+from charms_dependencies import DEX_AUTH, ISTIO_PILOT
 from pytest_operator.plugin import OpsTest
 
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
@@ -20,14 +21,6 @@ OIDC_CONFIG = {
     "client-secret": "oidc-client-secret",
 }
 
-ISTIO_PILOT = "istio-pilot"
-ISTIO_PILOT_CHANNEL = "1.24/stable"
-ISTIO_PILOT_TRUST = True
-
-DEX_AUTH = "dex-auth"
-DEX_AUTH_CHANNEL = "2.41/stable"
-DEX_AUTH_TRUST = True
-PUBLIC_URL = "test-url"
 
 image_path = METADATA["resources"]["oci-image"]["upstream-source"]
 RESOURCES = {"oci-image": image_path}
@@ -59,12 +52,12 @@ class TestOIDCOperator:
 
         # Deploying dex-auth is a hard requirement for this charm as
         # a dex-oidc-config requirer; otherwise it will block
-        await ops_test.model.deploy(DEX_AUTH, channel=DEX_AUTH_CHANNEL, trust=DEX_AUTH_TRUST)
+        await ops_test.model.deploy(DEX_AUTH.charm, channel=DEX_AUTH.channel, trust=DEX_AUTH.trust)
         await ops_test.model.wait_for_idle(
-            apps=[DEX_AUTH], status="active", raise_on_blocked=False, timeout=60 * 10
+            apps=[DEX_AUTH.charm], status="active", raise_on_blocked=False, timeout=60 * 10
         )
         await ops_test.model.integrate(
-            f"{APP_NAME}:dex-oidc-config", f"{DEX_AUTH}:dex-oidc-config"
+            f"{APP_NAME}:dex-oidc-config", f"{DEX_AUTH.charm}:dex-oidc-config"
         )
 
         await ops_test.model.wait_for_idle(
@@ -85,19 +78,21 @@ class TestOIDCOperator:
     @pytest.mark.abort_on_fail
     async def test_relations(self, ops_test: OpsTest):
         await ops_test.model.deploy(
-            ISTIO_PILOT,
-            channel=ISTIO_PILOT_CHANNEL,
-            trust=ISTIO_PILOT_TRUST,
+            ISTIO_PILOT.charm,
+            channel=ISTIO_PILOT.channel,
+            trust=ISTIO_PILOT.trust,
         )
-        await ops_test.model.integrate(ISTIO_PILOT, DEX_AUTH)
-        await ops_test.model.integrate(f"{ISTIO_PILOT}:ingress", f"{APP_NAME}:ingress")
-        await ops_test.model.integrate(f"{ISTIO_PILOT}:ingress-auth", f"{APP_NAME}:ingress-auth")
-        await ops_test.model.integrate(f"{APP_NAME}:oidc-client", f"{DEX_AUTH}:oidc-client")
+        await ops_test.model.integrate(ISTIO_PILOT.charm, DEX_AUTH.charm)
+        await ops_test.model.integrate(f"{ISTIO_PILOT.charm}:ingress", f"{APP_NAME}:ingress")
+        await ops_test.model.integrate(
+            f"{ISTIO_PILOT.charm}:ingress-auth", f"{APP_NAME}:ingress-auth"
+        )
+        await ops_test.model.integrate(f"{APP_NAME}:oidc-client", f"{DEX_AUTH.charm}:oidc-client")
 
         # Not raising on blocked will allow istio-pilot to be deployed
         # without istio-gateway and provide oidc with the data it needs.
         await ops_test.model.wait_for_idle(
-            [APP_NAME, ISTIO_PILOT, DEX_AUTH],
+            [APP_NAME, ISTIO_PILOT.charm, DEX_AUTH.charm],
             status="active",
             raise_on_blocked=False,
             raise_on_error=True,
@@ -112,13 +107,9 @@ class TestOIDCOperator:
     @pytest.mark.abort_on_fail
     @pytest.mark.timeout(1200)
     async def test_upgrade(self, ops_test: OpsTest):
-        """Test that charm can be upgraded from podspec to sidecar.
+        """Test that charm can be upgraded from previous stable channel.
 
         For this test we use APP_PREV_VERSION channel as the source for podspec charm.
-
-        Note: juju has a bug due to which you have to first scale podspec charm to 0,
-        then refresh, then scale up newly deployed app.
-        See https://github.com/juju/juju/pull/15701 for more info.
         """
         print(f"Deploy {APP_NAME} from stable channel")
         await ops_test.model.deploy(
@@ -127,26 +118,25 @@ class TestOIDCOperator:
             trust=PREVIOUS_RELEASE_TRUST,
             config=OIDC_CONFIG,
         )
-        await ops_test.model.integrate(f"{ISTIO_PILOT}:ingress", f"{APP_NAME}:ingress")
-        await ops_test.model.integrate(f"{ISTIO_PILOT}:ingress-auth", f"{APP_NAME}:ingress-auth")
-        await ops_test.model.integrate(f"{APP_NAME}:oidc-client", f"{DEX_AUTH}:oidc-client")
-
-        # TODO: remove after releasing ckf-1.9/stable, this has been preserved to avoid breaking
-        # integration tests.
-        await ops_test.model.applications[APP_NAME].set_config({"public-url": "http://foo.io"})
+        await ops_test.model.integrate(f"{ISTIO_PILOT.charm}:ingress", f"{APP_NAME}:ingress")
+        await ops_test.model.integrate(
+            f"{ISTIO_PILOT.charm}:ingress-auth", f"{APP_NAME}:ingress-auth"
+        )
+        await ops_test.model.integrate(f"{APP_NAME}:oidc-client", f"{DEX_AUTH.charm}:oidc-client")
+        await ops_test.model.integrate(
+            f"{APP_NAME}:dex-oidc-config", f"{DEX_AUTH.charm}:dex-oidc-config"
+        )
 
         print("Stable charm is deployed, add relations")
         await ops_test.model.wait_for_idle(
-            [APP_NAME, ISTIO_PILOT, DEX_AUTH],
+            [APP_NAME, ISTIO_PILOT.charm, DEX_AUTH.charm],
             status="active",
             raise_on_blocked=False,
             raise_on_error=True,
             timeout=600,
         )
-        print(f"Scale {APP_NAME} to 0 units")
-        await ops_test.model.applications[APP_NAME].scale(scale=0)
 
-        print("Try to refresh stable charm to locally built")
+        print("Refresh stable charm to locally built")
         # temporary measure while we don't have a solution for this:
         # * https://github.com/juju/python-libjuju/issues/881
         # Currently `application.local_refresh` doesn't work as expected.
@@ -161,13 +151,10 @@ class TestOIDCOperator:
             ]
         )
 
-        print(f"Scale {APP_NAME} to 1 unit")
-        await ops_test.model.applications[APP_NAME].scale(scale=1)
-
         await ops_test.model.wait_for_idle(
-            [APP_NAME, ISTIO_PILOT, DEX_AUTH],
+            [APP_NAME, ISTIO_PILOT.charm, DEX_AUTH.charm],
             status="active",
-            raise_on_blocked=True,
+            raise_on_blocked=False,
             raise_on_error=True,
             timeout=1200,
         )

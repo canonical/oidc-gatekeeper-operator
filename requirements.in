@@ -7,6 +7,8 @@ pydantic
 # oidc-gatekeeper's current implementation is not compatible
 # with SDI>0.3.
 serialized-data-interface<0.4
-charmed-kubeflow-chisme
+# Pin charmed-kubeflow-chisme due to
+# https://github.com/canonical/charmed-kubeflow-chisme/issues/155
+charmed-kubeflow-chisme>=0.4.11
 # from loki_k8s.v1.loki_push_api.py
 cosl
