@@ -22,7 +22,7 @@ resources:
     type: oci-image
     description: 'Backing OCI image'
     auto-fetch: true
-    upstream-source: charmedkubeflow/oidc-authservice:ckf-1.10-5c30ade
+    upstream-source: docker.io/charmedkubeflow/oidc-authservice:ckf-1.10-298ddf1
 peers:
   client-secret:
     interface: client-secret
