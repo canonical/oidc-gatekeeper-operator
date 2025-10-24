@@ -1,6 +1,7 @@
 resource "juju_application" "oidc_gatekeeper" {
   charm {
     name     = "oidc-gatekeeper"
+    base     = var.base
     channel  = var.channel
     revision = var.revision
   }
