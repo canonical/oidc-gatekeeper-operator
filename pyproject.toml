@@ -39,6 +39,9 @@ copyright-check = "True"
 copyright-author = "Canonical Ltd."
 copyright-regexp = "Copyright\\s\\d{4}([-,]\\d{4})*\\s+%(author)s"
 
+[tool.pyright]
+extraPaths = ["lib"]
+
 [tool.poetry]
 package-mode = false
 
@@ -52,6 +55,8 @@ cosl = "^0.0.45"
 oci-image = "^1.0.0"
 ops = "^2.17.1"
 pydantic = "^2.10.3"
+charmed-service-mesh-helpers = ">=0.2.0"
+lightkube-extensions = ">=0.2.0"
 
 [tool.poetry.group.fmt]
 optional = true
