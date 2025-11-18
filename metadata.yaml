@@ -29,6 +29,9 @@ peers:
   client-secret:
     interface: client-secret
 provides:
+  forward-auth:
+    interface: forward_auth
+    limit: 1
   oidc-client:
     interface: oidc-client
     schema:
@@ -53,7 +56,22 @@ provides:
           - secret
     versions: [v1]
     __schema_source: https://raw.githubusercontent.com/canonical/operator-schemas/oidc-schemas/oidc-client.yaml
+  provide-cmr-mesh:
+    interface: cross_model_mesh
+    description: |
+      If this app is generating polciies to provide access to related applications that are cross-model, relate that app to this additional relation to retrieve additional data required for these policies.  This is required because Juju does not natively provide all information required to build these policies when related cross-model.
 requires:
+  istio-ingress-route-unauthenticated:
+    interface: istio_ingress_route
+  service-mesh:
+    limit: 1
+    interface: service_mesh
+    description: |
+      Integrate this charm into a service mesh
+  require-cmr-mesh:
+    interface: cross_model_mesh
+    description: |
+      If this app relates to other applications on a charmed service mesh cross-model, use this relation to send that related app additional data needed to automatically generate traffic authorization policies.  This is required because Juju does not natively provide all information required to build these policies when related cross-model.
   dex-oidc-config:
     interface: dex-oidc-config
   ingress:

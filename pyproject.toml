@@ -39,6 +39,9 @@ copyright-check = "True"
 copyright-author = "Canonical Ltd."
 copyright-regexp = "Copyright\\s\\d{4}([-,]\\d{4})*\\s+%(author)s"
 
+[tool.pyright]
+extraPaths = ["lib"]
+
 [tool.poetry]
 package-mode = false
 
@@ -47,11 +50,13 @@ optional = true
 
 [tool.poetry.group.charm.dependencies]
 serialized-data-interface = "<0.4"
-charmed-kubeflow-chisme = ">=0.4.14"
+charmed-kubeflow-chisme = "^0.4.23"
 cosl = "^0.0.45"
 oci-image = "^1.0.0"
 ops = "^2.17.1"
 pydantic = "^2.10.3"
+charmed-service-mesh-helpers = ">=0.2.0"
+lightkube-extensions = ">=0.2.0"
 
 [tool.poetry.group.fmt]
 optional = true
@@ -88,7 +93,7 @@ optional = true
 
 [tool.poetry.group.integration.dependencies]
 juju = "<4.0"
-charmed-kubeflow-chisme = ">=0.4.14"
+charmed-kubeflow-chisme = "^0.4.23"
 aiohttp = "^3.10.11"
 jinja2 = "^3.1.4"
 lightkube = "^0.15.6"
