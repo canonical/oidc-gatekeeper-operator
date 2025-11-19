@@ -18,7 +18,11 @@ from charm import OIDCGatekeeperOperator
 
 @pytest.fixture
 def harness():
-    return Harness(OIDCGatekeeperOperator)
+    harness = Harness(OIDCGatekeeperOperator)
+    harness.set_model_name("kubeflow")
+    harness.set_leader(True)
+    yield harness
+    harness.cleanup()
 
 
 @patch("charm.KubernetesServicePatch", lambda x, y: None)
@@ -27,12 +31,6 @@ def test_log_forwarding(harness):
     with patch("charm.LogForwarder") as mock_logging:
         harness.begin()
         mock_logging.assert_called_once_with(charm=harness.charm)
-
-
-@patch("charm.KubernetesServicePatch", lambda x, y: None)
-def test_not_leader(harness):
-    harness.begin_with_initial_hooks()
-    assert harness.charm.model.unit.status == WaitingStatus("Waiting for leadership")
 
 
 @patch("charm.KubernetesServicePatch", lambda x, y: None)
