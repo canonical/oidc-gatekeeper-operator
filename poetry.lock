@@ -1527,23 +1527,23 @@ adal = ["adal (>=1.0.2)"]
 
 [[package]]
 name = "lightkube"
-version = "0.17.1"
+version = "0.15.8"
 description = "Lightweight kubernetes client library"
 optional = false
 python-versions = "*"
 groups = ["charm", "integration"]
 files = [
-    {file = "lightkube-0.17.1-py3-none-any.whl", hash = "sha256:3d046c2c46191b3745471763710ef4ed2df4259a7405f798b577df2ae390358a"},
-    {file = "lightkube-0.17.1.tar.gz", hash = "sha256:e0d6b71476a4fa7cbda7080da1f0943e43c7e747212db9f2ec7d87415bf8d23e"},
+    {file = "lightkube-0.15.8-py3-none-any.whl", hash = "sha256:236f6d11e9281764a8ae896ab2c28a4bc943dc0576822445064577eaa90677ba"},
+    {file = "lightkube-0.15.8.tar.gz", hash = "sha256:ac950d24ddbb59904708730f13ce254b05b6255a471dfab027cbe44c4123bfc6"},
 ]
 
 [package.dependencies]
-httpx = ">=0.24.0,<1.0.0"
+httpx = ">=0.24.0,<0.28.0"
 lightkube-models = ">=1.15.12.0"
 PyYAML = "*"
 
 [package.extras]
-dev = ["pytest", "pytest-asyncio", "respx"]
+dev = ["pytest", "pytest-asyncio (<0.17.0)", "respx"]
 
 [[package]]
 name = "lightkube-models"
@@ -3457,4 +3457,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<4.0"
-content-hash = "bc5c15e672d42d9fb466b0d458b3af0b9c81ae2dca4c3c73232395086f2ea6ec"
+content-hash = "7afcc71bdc45ec4fd45551a6e1ace93b73493bb8ea47585f0d2b22dca54a17f8"
