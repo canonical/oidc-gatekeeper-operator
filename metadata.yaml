@@ -16,6 +16,8 @@ issues: https://github.com/canonical/oidc-gatekeeper-operator/issues
 containers:
   oidc-authservice:
     resource: oci-image
+    uid: 584792
+    gid: 584792
 
 resources:
   oci-image:
@@ -121,3 +123,4 @@ requires:
   logging:
     interface: loki_push_api
     optional: true
+charm-user: non-root

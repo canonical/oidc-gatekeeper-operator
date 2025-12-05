@@ -2,18 +2,23 @@
 # See LICENSE file for licensing details.
 from pathlib import Path
 
+import lightkube
 import pytest
 import yaml
 from charmed_kubeflow_chisme.testing import (
     GRAFANA_AGENT_APP,
     assert_logging,
+    assert_security_context,
     deploy_and_assert_grafana_agent,
+    generate_container_securitycontext_map,
+    get_pod_names,
 )
 from charms_dependencies import DEX_AUTH, ISTIO_PILOT
 from pytest_operator.plugin import OpsTest
 
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 APP_NAME = METADATA["name"]
+CONTAINERS_SECURITY_CONTEXT_MAP = generate_container_securitycontext_map(METADATA)
 PREVIOUS_RELEASE = "ckf-1.9/stable"
 PREVIOUS_RELEASE_TRUST = True
 OIDC_CONFIG = {
@@ -24,6 +29,13 @@ OIDC_CONFIG = {
 
 image_path = METADATA["resources"]["oci-image"]["upstream-source"]
 RESOURCES = {"oci-image": image_path}
+
+
+@pytest.fixture(scope="session")
+def lightkube_client() -> lightkube.Client:
+    """Returns lightkube Kubernetes client"""
+    client = lightkube.Client(field_manager=f"{APP_NAME}")
+    return client
 
 
 def pytest_configure():
@@ -97,6 +109,27 @@ class TestOIDCOperator:
             raise_on_blocked=False,
             raise_on_error=True,
             timeout=600,
+        )
+
+    @pytest.mark.parametrize("container_name", list(CONTAINERS_SECURITY_CONTEXT_MAP.keys()))
+    async def test_container_security_context(
+        self,
+        ops_test: OpsTest,
+        lightkube_client: lightkube.Client,
+        container_name: str,
+    ):
+        """Test container security context is correctly set.
+
+        Verify that container spec defines the security context with correct
+        user ID and group ID.
+        """
+        pod_name = get_pod_names(ops_test.model.name, APP_NAME)[0]
+        assert_security_context(
+            lightkube_client,
+            pod_name,
+            container_name,
+            CONTAINERS_SECURITY_CONTEXT_MAP,
+            ops_test.model.name,
         )
 
     @pytest.mark.abort_on_fail
