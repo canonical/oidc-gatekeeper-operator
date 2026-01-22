@@ -34,6 +34,13 @@ def test_log_forwarding(harness):
 
 
 @patch("charm.KubernetesServicePatch", lambda x, y: None)
+def test_not_leader(harness: Harness):
+    harness.set_leader(False)
+    harness.begin_with_initial_hooks()
+    assert harness.charm.model.unit.status == WaitingStatus("Waiting for leadership")
+
+
+@patch("charm.KubernetesServicePatch", lambda x, y: None)
 def test_no_relation(harness):
     # Add dex-oidc-config relation by default; otherwise charm will block
     harness.add_relation("dex-oidc-config", "app", app_data={"issuer-url": "http://dex.io/dex"})

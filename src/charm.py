@@ -134,7 +134,9 @@ class OIDCGatekeeperOperator(CharmBase):
             ],
         )
 
-        self.ingress_unauthenticated.submit_config(config)
+        # Only submit config if we are a leader
+        if self.unit.is_leader():
+            self.ingress_unauthenticated.submit_config(config)
 
     @property
     def _service_url(self) -> str:
