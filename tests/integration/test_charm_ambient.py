@@ -2,14 +2,18 @@
 # See LICENSE file for licensing details.
 from pathlib import Path
 
+import lightkube
 import pytest
 import yaml
 from charmed_kubeflow_chisme.testing import (
     GRAFANA_AGENT_APP,
     assert_logging,
     assert_path_reachable_through_ingress,
+    assert_security_context,
     deploy_and_assert_grafana_agent,
     deploy_and_integrate_service_mesh_charms,
+    generate_container_securitycontext_map,
+    get_pod_names,
     integrate_with_service_mesh,
 )
 from charms_dependencies import DEX_AUTH, JUPYTER_UI
@@ -17,6 +21,7 @@ from pytest_operator.plugin import OpsTest
 
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 APP_NAME = METADATA["name"]
+CONTAINERS_SECURITY_CONTEXT_MAP = generate_container_securitycontext_map(METADATA)
 PREVIOUS_RELEASE = "ckf-1.9/stable"
 PREVIOUS_RELEASE_TRUST = True
 OIDC_CONFIG = {
@@ -122,6 +127,32 @@ class TestOIDCOperator:
         """Test logging is defined in relation data bag."""
         app = ops_test.model.applications[GRAFANA_AGENT_APP]
         await assert_logging(app)
+
+    @pytest.mark.parametrize("container_name", list(CONTAINERS_SECURITY_CONTEXT_MAP.keys()))
+    async def test_container_security_context(
+        self,
+        ops_test: OpsTest,
+        lightkube_client: lightkube.Client,
+        container_name: str,
+    ):
+        """Test container security context is correctly set.
+
+        Verify that container spec defines the security context with correct
+        user ID and group ID.
+        """
+        pod_name = get_pod_names(ops_test.model.name, APP_NAME)[0]
+        assert_security_context(
+            lightkube_client,
+            pod_name,
+            container_name,
+            CONTAINERS_SECURITY_CONTEXT_MAP,
+            ops_test.model.name,
+        )
+
+    @pytest.mark.abort_on_fail
+    async def test_remove_application(self, ops_test: OpsTest):
+        """Test that the application can be removed successfully."""
+        await ops_test.model.remove_application(APP_NAME, block_until_done=True)
 
     @pytest.mark.abort_on_fail
     async def test_login_redirection(self, ops_test: OpsTest):
