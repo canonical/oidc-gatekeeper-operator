@@ -68,6 +68,13 @@ class OIDCGatekeeperOperator(CharmBase):
         )
         self._ambient_mesh_ingress()
 
+        # Makes AuthService an external authorizer for Istio. This relation
+        # will end up doing the following:
+        # 1. Create an AuthorizatinoPolicy with CUSTOM action, for redirecting to AuthService
+        # 2. Extend the istio ConfigMap to have AuthService as an external authorizer
+        # 3. Extend the istio ConfigMap to allow the kubeflow-userid header to be set
+        #    in the ingress gateway, to requests it further forwards, based on the value
+        #    the AuthService had it its authn response.
         self.forward_auth = ForwardAuthProvider(
             self,
             relation_name="forward-auth",
