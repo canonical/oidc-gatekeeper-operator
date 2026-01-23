@@ -10,6 +10,7 @@ from charmed_kubeflow_chisme.testing import (
     assert_path_reachable_through_ingress,
     deploy_and_assert_grafana_agent,
     deploy_and_integrate_service_mesh_charms,
+    integrate_with_service_mesh,
 )
 from charms_dependencies import DEX_AUTH, JUPYTER_UI
 from pytest_operator.plugin import OpsTest
@@ -104,10 +105,7 @@ class TestOIDCOperator:
         await ops_test.model.deploy(
             JUPYTER_UI.charm, channel=JUPYTER_UI.channel, trust=JUPYTER_UI.trust
         )
-        await ops_test.model.integrate(
-            f"{JUPYTER_UI.charm}:{ISTIO_INGRESS_ROUTE_ENDPOINT}",
-            f"{ISTIO_INGRESS_K8S}:{ISTIO_INGRESS_ROUTE_ENDPOINT}",
-        )
+        await integrate_with_service_mesh(JUPYTER_UI.charm, ops_test.model)
         await ops_test.model.wait_for_idle(
             apps=[JUPYTER_UI.charm],
             status="active",
@@ -127,9 +125,20 @@ class TestOIDCOperator:
 
     @pytest.mark.abort_on_fail
     async def test_login_redirection(self, ops_test: OpsTest):
+        """Test that authservice is registered as external authorizer and redirects to Dex."""
         await assert_path_reachable_through_ingress(
             http_path="/jupyter/",
             namespace=ops_test.model.name,
             expected_status=302,
             expected_response_text="dex/auth?client_id",
+        )
+
+    @pytest.mark.abort_on_fail
+    async def test_authservice_url_is_unauthenticated(self, ops_test: OpsTest):
+        """Test that the authservice url is accessible without auth redirects."""
+        await assert_path_reachable_through_ingress(
+            http_path="/authservice/",
+            namespace=ops_test.model.name,
+            expected_status=200,
+            expected_response_text="OK",
         )
