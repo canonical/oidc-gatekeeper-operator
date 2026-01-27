@@ -18,7 +18,11 @@ from charm import OIDCGatekeeperOperator
 
 @pytest.fixture
 def harness():
-    return Harness(OIDCGatekeeperOperator)
+    harness = Harness(OIDCGatekeeperOperator)
+    harness.set_model_name("kubeflow")
+    harness.set_leader(True)
+    yield harness
+    harness.cleanup()
 
 
 @patch("charm.KubernetesServicePatch", lambda x, y: None)
@@ -30,14 +34,14 @@ def test_log_forwarding(harness):
 
 
 @patch("charm.KubernetesServicePatch", lambda x, y: None)
-def test_not_leader(harness):
+def test_not_leader(harness: Harness):
+    harness.set_leader(False)
     harness.begin_with_initial_hooks()
     assert harness.charm.model.unit.status == WaitingStatus("Waiting for leadership")
 
 
 @patch("charm.KubernetesServicePatch", lambda x, y: None)
 def test_no_relation(harness):
-    harness.set_leader(True)
     # Add dex-oidc-config relation by default; otherwise charm will block
     harness.add_relation("dex-oidc-config", "app", app_data={"issuer-url": "http://dex.io/dex"})
 
@@ -56,8 +60,6 @@ def test_no_relation(harness):
 
 @patch("charm.KubernetesServicePatch", lambda x, y: None)
 def test_with_relation(harness):
-    harness.set_leader(True)
-
     # Add dex-oidc-config relation by default; otherwise charm will block
     harness.add_relation("dex-oidc-config", "app", app_data={"issuer-url": "http://dex.io/dex"})
 
@@ -77,7 +79,6 @@ def test_with_relation(harness):
 
 @patch("charm.KubernetesServicePatch", lambda x, y: None)
 def test_skip_auth_url_config_has_value(harness):
-    harness.set_leader(True)
     harness.update_config({"skip-auth-urls": "/test/,/path1/"})
 
     # Add dex-oidc-config relation by default; otherwise charm will block
@@ -94,7 +95,6 @@ def test_skip_auth_url_config_has_value(harness):
 
 @patch("charm.KubernetesServicePatch", lambda x, y: None)
 def test_skip_auth_url_config_is_empty(harness):
-    harness.set_leader(True)
     # Add dex-oidc-config relation by default; otherwise charm will block
     harness.add_relation("dex-oidc-config", "app", app_data={"issuer-url": "http://dex.io/dex"})
 
@@ -107,7 +107,6 @@ def test_skip_auth_url_config_is_empty(harness):
 
 @patch("charm.KubernetesServicePatch", lambda x, y: None)
 def test_ca_bundle_config(harness):
-    harness.set_leader(True)
     harness.update_config({"ca-bundle": "aaa"})
     # Add dex-oidc-config relation by default; otherwise charm will block
     harness.add_relation("dex-oidc-config", "app", app_data={"issuer-url": "http://dex.io/dex"})
@@ -123,7 +122,6 @@ def test_ca_bundle_config(harness):
 
 @patch("charm.KubernetesServicePatch", lambda x, y: None)
 def test_session_store(harness):
-    harness.set_leader(True)
     # Add dex-oidc-config relation by default; otherwise charm will block
     harness.add_relation("dex-oidc-config", "app", app_data={"issuer-url": "http://dex.io/dex"})
 
@@ -145,7 +143,6 @@ def test_pebble_ready_hook_handled(harness: Harness):
     """
     Test if we handle oidc_authservice_pebble_ready hook. This test fails if we don't.
     """
-    harness.set_leader(True)
     # Add dex-oidc-config relation by default; otherwise charm will block
     harness.add_relation("dex-oidc-config", "app", app_data={"issuer-url": "http://dex.io/dex"})
 
@@ -163,7 +160,6 @@ def test_pebble_ready_hook_handled(harness: Harness):
 @patch("charm.KubernetesServicePatch", lambda x, y: None)
 def test_charm_blocks_on_missing_dex_oidc_config_relation(harness):
     """Test the charm goes into BlockedStatus when the relation is missing."""
-    harness.set_leader(True)
     harness.add_oci_resource(
         "oci-image",
         {
@@ -184,7 +180,6 @@ def test_charm_blocks_on_missing_dex_oidc_config_relation(harness):
 @patch("charm.KubernetesServicePatch", lambda x, y: None)
 def test_service_environment_uses_data_from_relation(harness):
     """Test the service_environment property has the correct values set by the relation data."""
-    harness.set_leader(True)
     # Add the client-secret peer relation as it is required to render the service environment
     harness.add_relation("client-secret", harness.model.app.name)
 
