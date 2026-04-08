@@ -193,6 +193,36 @@ def test_service_environment_uses_data_from_relation(harness):
 
 
 @patch("charm.KubernetesServicePatch", lambda x, y: None)
+def test_jwt_disabled_by_default(harness):
+    harness.add_relation("dex-oidc-config", "app", app_data={"issuer-url": "http://dex.io/dex"})
+
+    harness.begin_with_initial_hooks()
+
+    plan = harness.get_container_pebble_plan("oidc-authservice")
+    env = plan.services["oidc-authservice"].environment
+    assert "ACCESS_TOKEN_AUTHN" not in env
+    assert "ACCESS_TOKEN_AUTHN_ENABLED" not in env
+    assert "IDTOKEN_AUTHN_ENABLED" not in env
+
+
+@patch("charm.KubernetesServicePatch", lambda x, y: None)
+def test_enable_jwt(harness):
+    harness.update_config({"enable-jwt": True})
+    harness.add_relation("dex-oidc-config", "app", app_data={"issuer-url": "http://dex.io/dex"})
+
+    harness.begin_with_initial_hooks()
+
+    plan = harness.get_container_pebble_plan("oidc-authservice")
+    env = plan.services["oidc-authservice"].environment
+    assert env["ACCESS_TOKEN_AUTHN"] == "jwt"
+    assert env["ACCESS_TOKEN_AUTHN_ENABLED"] == "true"
+    assert env["IDTOKEN_AUTHN_ENABLED"] == "true"
+    assert env["CACHE_ENABLED"] == "true"
+    assert env["ID_TOKEN_HEADER"] == "Authorization"
+    assert env["USERID_TOKEN_HEADER"] == "kubeflow-userid-token"
+
+
+@patch("charm.KubernetesServicePatch", lambda x, y: None)
 @pytest.mark.parametrize(
     "expected_raise, expected_status",
     (
