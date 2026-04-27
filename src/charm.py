@@ -13,7 +13,20 @@ from charms.dex_auth.v0.dex_oidc_config import (
     DexOidcConfigRelationMissingError,
     DexOidcConfigRequirer,
 )
+from charms.istio_beacon_k8s.v0.service_mesh import ServiceMeshConsumer
+from charms.istio_ingress_k8s.v0.istio_ingress_route import (
+    BackendRef,
+    HTTPPathMatch,
+    HTTPPathMatchType,
+    HTTPRoute,
+    HTTPRouteMatch,
+    IstioIngressRouteConfig,
+    IstioIngressRouteRequirer,
+    Listener,
+    ProtocolType,
+)
 from charms.loki_k8s.v1.loki_push_api import LogForwarder
+from charms.oauth2_proxy_k8s.v0.forward_auth import ForwardAuthConfig, ForwardAuthProvider
 from charms.observability_libs.v1.kubernetes_service_patch import KubernetesServicePatch
 from lightkube.models.core_v1 import ServicePort
 from ops import main
@@ -46,6 +59,30 @@ class OIDCGatekeeperOperator(CharmBase):
         self.service_patcher = KubernetesServicePatch(
             self,
             [http_service_port],
+        )
+
+        # Ambient Mesh integration
+        self._mesh = ServiceMeshConsumer(self)
+        self.ingress_unauthenticated = IstioIngressRouteRequirer(
+            self, relation_name="istio-ingress-route-unauthenticated"
+        )
+        self._ambient_mesh_ingress()
+
+        # Makes AuthService an external authorizer for Istio. This relation
+        # will end up doing the following:
+        # 1. Create an AuthorizatinoPolicy with CUSTOM action, for redirecting to AuthService
+        # 2. Extend the istio ConfigMap to have AuthService as an external authorizer
+        # 3. Extend the istio ConfigMap to allow the kubeflow-userid header to be set
+        #    in the ingress gateway, to requests it further forwards, based on the value
+        #    the AuthService had it its authn response.
+        self.forward_auth = ForwardAuthProvider(
+            self,
+            relation_name="forward-auth",
+            forward_auth_config=ForwardAuthConfig(
+                decisions_address=self._service_url,
+                app_names=[],
+                headers=["kubeflow-userid"],
+            ),
         )
 
         for event in [
@@ -81,6 +118,36 @@ class OIDCGatekeeperOperator(CharmBase):
             return
 
         self.model.unit.status = ActiveStatus()
+
+    def _ambient_mesh_ingress(self):
+        http_listener = Listener(port=80, protocol=ProtocolType.HTTP)
+
+        config = IstioIngressRouteConfig(
+            model=self.model.name,
+            listeners=[http_listener],
+            http_routes=[
+                HTTPRoute(
+                    name="http-ingress",
+                    listener=http_listener,
+                    matches=[
+                        HTTPRouteMatch(
+                            path=HTTPPathMatch(
+                                type=HTTPPathMatchType.PathPrefix, value="/authservice/"
+                            )
+                        )
+                    ],
+                    backends=[BackendRef(service=self.app.name, port=self._http_port)],
+                )
+            ],
+        )
+
+        # Only submit config if we are a leader
+        if self.unit.is_leader():
+            self.ingress_unauthenticated.submit_config(config)
+
+    @property
+    def _service_url(self) -> str:
+        return f"http://{self.app.name}.{self.model.name}.svc.cluster.local:{self._http_port}"
 
     def _check_dex_oidc_config_relation(self) -> None:
         """Check for exceptions from the library and raises ErrorWithStatus to set the unit status.
@@ -133,7 +200,9 @@ class OIDCGatekeeperOperator(CharmBase):
         if self.model.config["ca-bundle"]:
             if self._container.can_connect():
                 self._container.push(
-                    "/etc/certs/oidc/root-ca.pem", self.model.config["ca-bundle"], make_dirs=True
+                    "/etc/certs/oidc/root-ca.pem",
+                    self.model.config["ca-bundle"],
+                    make_dirs=True,
                 )
                 ret_env_vars["CA_BUNDLE"] = "/etc/certs/oidc/root-ca.pem"
 
