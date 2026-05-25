@@ -10,6 +10,9 @@ on:
       origin-channel:
         description: 'Origin Channel'
         required: true
+      charm-name:
+        description: 'Charm subdirectory name'
+        required: true
 
 jobs:
   promote-charm:
@@ -23,7 +26,7 @@ jobs:
           sudo snap install charmcraft --classic --channel latest/stable
       - name: Run charmcraft promote
         run: |
-          charmcraft promote --name oidc-gatekeeper \
+          charmcraft promote --name ${{ github.event.inputs.charm-name }} \
                               --from-channel ${{ github.event.inputs.origin-channel }} \
                               --to-channel ${{ github.event.inputs.destination-channel }} \
                               --yes
