@@ -174,7 +174,7 @@ jobs:
         if: failure()
 
       - name: Get dex-auth workload logs
-        run: kubectl logs --tail 100 -n testing -lapp.kubernetes.io/name=dex-auth
+        run: kubectl logs --tail 100 -n testing -lapp.kubernetes.io/name=dex-auth -c dex
         if: failure()
 
       - name: Get istio-pilot workload logs
