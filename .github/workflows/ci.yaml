@@ -170,7 +170,7 @@ jobs:
         if: always()
 
       - name: Get oidc-gatekeeper workload logs
-        run: kubectl logs --tail 100 -n testing -lapp.kubernetes.io/name=oidc-gatekeeper
+        run: kubectl logs --tail 100 -n testing -lapp.kubernetes.io/name=oidc-gatekeeper -c oidc-authservice
         if: failure()
 
       - name: Get dex-auth workload logs
