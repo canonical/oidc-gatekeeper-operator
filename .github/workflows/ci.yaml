@@ -167,7 +167,7 @@ jobs:
 
       - name: Get juju status
         run: juju status
-        if: failure()
+        if: always()
 
       - name: Get oidc-gatekeeper workload logs
         run: kubectl logs --tail 100 -n testing -lapp.kubernetes.io/name=oidc-gatekeeper
