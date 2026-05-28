@@ -46,8 +46,12 @@ def pytest_configure():
 class TestOIDCOperator:
     charm_under_test = None
 
-    async def test_build(self, ops_test: OpsTest):
-        pytest.charm_under_test = await ops_test.build_charm(".")
+    async def test_build(self, ops_test: OpsTest, request):
+        pytest.charm_under_test = (
+            await ops_test.build_charm(".")
+            if not (charm_path := request.config.getoption("--charm-path"))
+            else charm_path
+        )
 
     @pytest.mark.abort_on_fail
     async def test_deploy(self, ops_test: OpsTest):
