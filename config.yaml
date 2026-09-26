@@ -38,3 +38,10 @@ options:
     type: string
     default: 'email'
     description: OpenID Connect claim whose value will be used as the userid.
+  enable-jwt:
+    type: boolean
+    default: false
+    description: |
+      Enable JWT bearer token authentication alongside cookie-based session auth.
+      When enabled, the oidc-authservice will accept Authorization header bearer tokens
+      and ID tokens in addition to session cookies.

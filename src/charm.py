@@ -197,6 +197,14 @@ class OIDCGatekeeperOperator(CharmBase):
             "SKIP_AUTH_URLS": dex_skip_urls,
         }
 
+        if self.model.config["enable-jwt"]:
+            ret_env_vars["ACCESS_TOKEN_AUTHN"] = "jwt"
+            ret_env_vars["ACCESS_TOKEN_AUTHN_ENABLED"] = "true"
+            ret_env_vars["IDTOKEN_AUTHN_ENABLED"] = "true"
+            ret_env_vars["CACHE_ENABLED"] = "true"
+            ret_env_vars["ID_TOKEN_HEADER"] = "Authorization"
+            ret_env_vars["USERID_TOKEN_HEADER"] = "kubeflow-userid-token"
+
         if self.model.config["ca-bundle"]:
             if self._container.can_connect():
                 self._container.push(
@@ -258,15 +266,18 @@ class OIDCGatekeeperOperator(CharmBase):
                 }
             )
         if interfaces["ingress-auth"]:
+            request_headers = ["cookie", "X-Auth-Token"]
+            response_headers = ["kubeflow-userid"]
+            if self.model.config["enable-jwt"]:
+                request_headers.append("Authorization")
+                response_headers.append("kubeflow-userid-token")
+
             interfaces["ingress-auth"].send_data(
                 {
                     "service": self.model.app.name,
                     "port": self._http_port,
-                    "allowed-request-headers": [
-                        "cookie",
-                        "X-Auth-Token",
-                    ],
-                    "allowed-response-headers": ["kubeflow-userid"],
+                    "allowed-request-headers": request_headers,
+                    "allowed-response-headers": response_headers,
                 }
             )
 
